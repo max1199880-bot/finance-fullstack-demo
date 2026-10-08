@@ -1,0 +1,8 @@
+{
+  "// Зачем": "Рядом лежит package.json фронтенда, и без этого файла deno переключается на node-резолвинг и не находит npm:@supabase/supabase-js нужной версии. Явный импорт-мап делает `deno check` воспроизводимым.",
+  "nodeModulesDir": "none",
+  "imports": {
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2.58.0"
+  },
+  "lint": { "rules": { "tags": ["recommended"] } }
+}

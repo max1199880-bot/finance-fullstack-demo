@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#000000" />
+    <title>Финансы</title>
+
+    <!-- PWA / iOS home-screen install. The web manifest <link> is injected by
+         vite-plugin-pwa at build time; these Apple-specific tags it does not. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Финансы" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon-180.png" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- Telegram Mini App SDK — SELF-HOSTED (served from our own domain), not
+         from telegram.org. Two reasons this matters in RU:
+           1. telegram.org is throttled/blocked by many RU ISPs without a VPN.
+              A blocking <script> there stalled HTML parsing → black screen on
+              the standalone PWA without a VPN. Our domain is reachable, so this
+              loads fast and never blacks out.
+           2. It must load SYNCHRONOUSLY (before main.tsx) so window.Telegram.
+              WebApp.initData is ready when AuthGate runs — that's what makes the
+              Mini App auto-login work. (Loading it `async` broke auto-login:
+              initData wasn't ready yet, so the app fell back to the login page.)
+         Keep this file in sync occasionally via scripts/update-tg-sdk if needed. -->
+    <script src="/telegram-web-app.js"></script>
+  </head>
+  <body class="bg-ios-bg text-ios-text antialiased">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,26 @@
+# зависимости и сборка
+node_modules
+dist
+dist-ssr
+*.tsbuildinfo
+*.local
+
+# инструменты
+.vercel
+.playwright-mcp
+.claude
+
+# локальная папка сдачи (ссылки для платформы, не часть репозитория)
+Для Сдачи ДЗ/
+
+# редакторы и система
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.log
+supabase/functions/.env
+
+# служебные файлы локального Supabase: содержат ключи запущенного стенда
+supabase/.temp/
+supabase/.branches/
