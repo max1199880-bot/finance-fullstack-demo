@@ -220,6 +220,9 @@ async function call<T>(path: string, options: RequestInit = {}): Promise<T> {
   // поэтому долгая работа приложения не заканчивается внезапным 401.
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
+  // Без сессии идти в сеть незачем: ответ заведомо 401. Экран входа открывается
+  // без единого отказа в журнале, а запросы не тратятся впустую.
+  if (!token) throw new ApiError('Требуется вход', 401);
 
   const headers: Record<string, string> = {
     // apikey обязателен для шлюза Supabase, Authorization — для нашей функции.

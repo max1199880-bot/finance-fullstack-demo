@@ -24,3 +24,6 @@ supabase/functions/.env
 # служебные файлы локального Supabase: содержат ключи запущенного стенда
 supabase/.temp/
 supabase/.branches/
+
+# ключи облачного стенда
+.env.cloud

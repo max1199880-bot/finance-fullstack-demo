@@ -4,8 +4,15 @@
 Фронтенд взят из ДЗ 4 без изменений дизайна; вместо демо-сервера в браузере у него теперь
 настоящий бэкенд: PostgreSQL, своё API и вход по паролю.
 
-**Демо:** [ссылка на деплой] · **Вход:** кнопка «Посмотреть демо» открывает готовый аккаунт
+**Демо:** https://finance-fullstack-demo.vercel.app · **API:** `https://ckckfoghvbkwivagrgoo.supabase.co/functions/v1/api` · **Вход:** кнопка «Посмотреть демо» открывает готовый аккаунт
 с вымышленными данными. Для своих данных можно зарегистрироваться.
+
+| Вход | Главная | Бюджет | Капитал |
+|---|---|---|---|
+| ![](docs/screenshots/login.png) | ![](docs/screenshots/home.png) | ![](docs/screenshots/budget.png) | ![](docs/screenshots/capital.png) |
+
+Снимки сделаны скриптом `npm run screenshots` с боевого адреса: он заходит в демо,
+обходит экраны и заодно проверяет, что в консоли нет ошибок, а API не отвечает 4xx/5xx.
 
 ---
 
@@ -151,7 +158,7 @@ PostgREST своим токеном, и не может записать опе�
 
 ## 5. API
 
-Базовый адрес: `https://<project>.supabase.co/functions/v1/api`.
+Базовый адрес: `https://ckckfoghvbkwivagrgoo.supabase.co/functions/v1/api`.
 Авторизация: `Authorization: Bearer <access_token>` и `apikey: <anon-ключ>`.
 Ответы — JSON. Ошибка всегда одной формы: `{"error": "текст для пользователя"}`.
 
@@ -323,7 +330,7 @@ SUPABASE_URL=https://<ref>.supabase.co SUPABASE_SERVICE_ROLE_KEY=… npm run see
 Проверка после выкладки:
 
 ```bash
-curl -s https://<ref>.supabase.co/functions/v1/api/health   # → {"ok":true,…}
+curl -s https://ckckfoghvbkwivagrgoo.supabase.co/functions/v1/api/health   # → {"ok":true,…}
 ```
 
 ---
@@ -333,7 +340,7 @@ curl -s https://<ref>.supabase.co/functions/v1/api/health   # → {"ok":true,…
 | Прогон | Что проверяет | Количество |
 |---|---|---|
 | `npm run test:api` | Настоящий бэкенд: вход, изоляция данных, CORS, CRUD, бюджет, капитал, активы, кредиты | 39 |
-| `npm test` | Экраны приложения поверх демо-сервера в памяти | 84 |
+| `npm test` | Экраны приложения и логика поверх демо-сервера в памяти | 55 |
 
 Тесты API работают против локального Supabase, без моков: смысл именно в том, что сходятся
 политики RLS, SQL-функции и обработчики. Мок проверял бы только наши ожидания от самих себя.

@@ -485,32 +485,23 @@ export const routes: Route[] = [
       if (already) {
         transactionId = already.id;
       } else {
-        // Почему не через post_transaction: для типа 'expense' он начисляет сумму на
-        // счёт-получатель, то есть УВЕЛИЧИЛ бы долг на весь платёж. А тип менять нельзя —
-        // платёж по кредиту должен попадать в расходы месяца и в план/факт категории.
-        // Поэтому строку пишем сами, а остатки двигаем двумя точными сдвигами.
-        const ins = await ctx.db
-          .from('transactions')
-          .insert({
-            user_id: ctx.userId,
-            date: date.toISOString(),
-            amount: toDb(amount),
-            type: 'expense',
-            category_id: categoryId,
-            from_account_id: from.id,
-            to_account_id: credit.id,
-            principal_part: toDb(principal),
-            interest_part: toDb(interestPart),
-            comment,
-            client_tx_id: clientTxId,
-          })
-          .select('id')
-          .single();
-        if (ins.error) throw new Error(ins.error.message);
-        transactionId = String(ins.data.id);
-        // Со счёта ушёл весь платёж, долг уменьшился только на тело: проценты — плата банку.
-        await bump(ctx, from.id, -amount, date);
-        await bump(ctx, credit.id, -principal, date);
+        // Платёж пишет SQL-функция pay_credit: операция и оба остатка меняются одной
+        // транзакцией базы. Общая post_transaction здесь не подходит — для типа 'expense'
+        // она начислила бы платёж на счёт-получатель, то есть увеличила бы долг, а тип
+        // менять нельзя: платёж должен попадать в расходы месяца и в план/факт категории.
+        const paid = await ctx.db.rpc('pay_credit', {
+          p_credit_account_id: credit.id,
+          p_from_account_id: from.id,
+          p_category_id: categoryId,
+          p_amount: toDb(amount),
+          p_principal: toDb(principal),
+          p_interest: toDb(interestPart),
+          p_date: date.toISOString(),
+          p_comment: comment,
+          p_client_tx_id: clientTxId,
+        });
+        if (paid.error) throw new Error(paid.error.message);
+        transactionId = String(paid.data);
       }
 
       return {

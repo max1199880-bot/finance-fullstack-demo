@@ -95,5 +95,8 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     css: false,
     include: ['src/**/*.test.{ts,tsx}'],
+    // Интеграционные тесты API живут отдельно (vitest.api.config.ts): им нужен
+    // запущенный Supabase, а этому прогону — только браузерное окружение.
+    exclude: ['src/test/api/**'],
   },
 });

@@ -20,7 +20,9 @@ export interface Client {
 
 /** Новый пользователь на каждый тест-файл: чужие данные не мешают и видно работу RLS. */
 export async function createUser(prefix = 'test'): Promise<Client> {
-  const email = `${prefix}-${crypto.randomUUID()}@finance-test.local`;
+  // Домен example.com зарезервирован стандартом под примеры: Supabase в облаке
+  // отвергает выдуманные зоны вроде .local, а на этот адрес письма никому не уйдут.
+  const email = `${prefix}-${crypto.randomUUID()}@example.com`;
   const supabase = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false } });
   const { data, error } = await supabase.auth.signUp({ email, password: 'test-password-123' });
   if (error) throw new Error(`Регистрация не удалась: ${error.message}`);
