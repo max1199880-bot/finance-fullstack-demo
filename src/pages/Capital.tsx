@@ -2,7 +2,12 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import { alertDialog, popupDialog } from '../lib/dialog';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, type AccountDTO } from '../lib/api';
-import { MUTATION_KEYS, newClientTxId, type SetBalanceVariables, type AddTxVariables } from '../lib/mutationDefaults';
+import {
+  MUTATION_KEYS,
+  newClientTxId,
+  type SetBalanceVariables,
+  type AddTxVariables,
+} from '../lib/mutationDefaults';
 import { Header } from '../components/Header';
 import { Card, ListRow } from '../components/Card';
 import { Sheet } from '../components/Sheet';
@@ -48,7 +53,9 @@ function glueRub(s: string): string {
 export function CapitalPage() {
   const cap = useQuery({ queryKey: ['capital'], queryFn: api.capital, staleTime: 15_000 });
   const [modal, setModal] = useState<Modal | null>(null);
-  const [achievement, setAchievement] = useState<{ amount: string; total?: string; title?: string } | null>(null);
+  const [achievement, setAchievement] = useState<{ amount: string; total?: string; title?: string } | null>(
+    null,
+  );
   // Default headline = gross assets (WITHOUT debts). Tap the «Кредиты» tile to
   // switch to net worth WITH debts subtracted.
   const [showWithDebts, setShowWithDebts] = useState(false);
@@ -72,8 +79,8 @@ export function CapitalPage() {
     arr.push(a);
     groups.set(a.type, arr);
   }
-  const orderedTypes = ['bank', 'cash', 'investment', 'other_asset', 'credit', 'credit_buffer'].filter(
-    (t) => groups.has(t),
+  const orderedTypes = ['bank', 'cash', 'investment', 'other_asset', 'credit', 'credit_buffer'].filter((t) =>
+    groups.has(t),
   );
 
   return (
@@ -106,7 +113,9 @@ export function CapitalPage() {
 
       <div className="px-4">
         <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 text-white rounded-ios-lg p-5 shadow-lg">
-          <div className="text-sm opacity-80">{hasDebts && showWithDebts ? 'С учётом кредитов' : 'Net Worth'}</div>
+          <div className="text-sm opacity-80">
+            {hasDebts && showWithDebts ? 'С учётом кредитов' : 'Net Worth'}
+          </div>
           {/* Fluid size: exactly text-4xl (36px) from 375px wide, a bit smaller on
               narrower phones so a 7-digit amount fits on one line; ₽ is glued to
               the number so it never wraps onto a line of its own. */}
@@ -114,20 +123,30 @@ export function CapitalPage() {
             {glueRub(fmtRub(hasDebts && showWithDebts ? c.totalNetWorth : grossAssets))}
           </div>
           {hasDebts && showWithDebts && (
-            <div className="text-[12px] opacity-80 mt-1">без кредитов — {fmtRub(grossAssets, { compact: true })}</div>
+            <div className="text-[12px] opacity-80 mt-1">
+              без кредитов — {fmtRub(grossAssets, { compact: true })}
+            </div>
           )}
-          <div className={`mt-3 grid gap-2 text-[12px] ${hasDebts ? 'grid-cols-2 min-[360px]:grid-cols-4' : 'grid-cols-3'}`}>
+          <div
+            className={`mt-3 grid gap-2 text-[12px] ${hasDebts ? 'grid-cols-2 min-[360px]:grid-cols-4' : 'grid-cols-3'}`}
+          >
             <div className="bg-white/15 rounded-md px-2 py-1.5">
               <div className="opacity-80">Деньги</div>
-              <div className="font-semibold tabular-nums mt-0.5 whitespace-nowrap">{fmtRub(c.totalCash, { compact: true })}</div>
+              <div className="font-semibold tabular-nums mt-0.5 whitespace-nowrap">
+                {fmtRub(c.totalCash, { compact: true })}
+              </div>
             </div>
             <div className="bg-white/15 rounded-md px-2 py-1.5">
               <div className="opacity-80">Инвест.</div>
-              <div className="font-semibold tabular-nums mt-0.5 whitespace-nowrap">{fmtRub(c.totalInvestments, { compact: true })}</div>
+              <div className="font-semibold tabular-nums mt-0.5 whitespace-nowrap">
+                {fmtRub(c.totalInvestments, { compact: true })}
+              </div>
             </div>
             <div className="bg-white/15 rounded-md px-2 py-1.5">
               <div className="opacity-80">Прочие</div>
-              <div className="font-semibold tabular-nums mt-0.5 whitespace-nowrap">{fmtRub(c.totalOther, { compact: true })}</div>
+              <div className="font-semibold tabular-nums mt-0.5 whitespace-nowrap">
+                {fmtRub(c.totalOther, { compact: true })}
+              </div>
             </div>
             {hasDebts && (
               <button
@@ -141,7 +160,9 @@ export function CapitalPage() {
                 }`}
               >
                 <div className="opacity-80">Кредиты</div>
-                <div className="font-semibold tabular-nums mt-0.5 whitespace-nowrap">−{fmtRub(c.totalCredits, { compact: true })}</div>
+                <div className="font-semibold tabular-nums mt-0.5 whitespace-nowrap">
+                  −{fmtRub(c.totalCredits, { compact: true })}
+                </div>
               </button>
             )}
           </div>
@@ -172,9 +193,7 @@ export function CapitalPage() {
                           <div className="text-[11px] text-ios-hint mt-0.5">{a.quantity} шт</div>
                         )}
                         {a.type === 'credit_buffer' && (
-                          <div className="text-[11px] text-ios-hint mt-0.5">
-                            накоплено к платежу
-                          </div>
+                          <div className="text-[11px] text-ios-hint mt-0.5">накоплено к платежу</div>
                         )}
                       </div>
                     </div>
@@ -205,11 +224,7 @@ export function CapitalPage() {
         })}
       </div>
 
-      <ActionMenu
-        modal={modal}
-        onClose={() => setModal(null)}
-        onPick={(next) => setModal(next)}
-      />
+      <ActionMenu modal={modal} onClose={() => setModal(null)} onPick={(next) => setModal(next)} />
       <AccountHistorySheet modal={modal} onClose={() => setModal(null)} />
       <LossSheet
         open={modal?.kind === 'loss'}
@@ -296,8 +311,8 @@ function ActionMenu({
           />
           {isCredit && (
             <div className="text-center text-xs text-ios-hint px-4 py-2 leading-snug">
-              Платёж по кредиту вносится через ➕ → «Кредит»: спишется со счёта в
-              расходы, тело долга уменьшится, проценты уйдут банку.
+              Платёж по кредиту вносится через ➕ → «Кредит»: спишется со счёта в расходы, тело долга
+              уменьшится, проценты уйдут банку.
             </div>
           )}
           {!isCredit && !isCreditBuffer && !isLotPosition && (
@@ -315,18 +330,10 @@ function ActionMenu({
             />
           )}
           {a.type === 'investment' && (
-            <ActionBtn
-              icon="📥"
-              label="Пополнить"
-              onClick={() => onPick({ kind: 'topUp', account: a })}
-            />
+            <ActionBtn icon="📥" label="Пополнить" onClick={() => onPick({ kind: 'topUp', account: a })} />
           )}
           {isLotPosition && (
-            <ActionBtn
-              icon="➕"
-              label="Докупить"
-              onClick={() => onPick({ kind: 'restock', account: a })}
-            />
+            <ActionBtn icon="➕" label="Докупить" onClick={() => onPick({ kind: 'restock', account: a })} />
           )}
           {isLotPosition && (
             <ActionBtn
@@ -336,11 +343,7 @@ function ActionMenu({
             />
           )}
           {isAsset && !isLotPosition && (
-            <ActionBtn
-              icon="💱"
-              label="Продать"
-              onClick={() => onPick({ kind: 'sell', account: a })}
-            />
+            <ActionBtn icon="💱" label="Продать" onClick={() => onPick({ kind: 'sell', account: a })} />
           )}
           {isAsset && !isLotPosition && (
             <ActionBtn
@@ -390,8 +393,8 @@ function ActionMenu({
           )}
           {isCreditBuffer && (
             <div className="text-center text-xs text-ios-hint px-4 py-3 leading-snug">
-              Это вспомогательный счёт для платежей по кредиту. Удалить можно
-              только сам кредит — взнос исчезнет вместе с ним.
+              Это вспомогательный счёт для платежей по кредиту. Удалить можно только сам кредит — взнос
+              исчезнет вместе с ним.
             </div>
           )}
         </div>
@@ -402,13 +405,7 @@ function ActionMenu({
 
 // ─── Account movement history (transactions touching this account) ───────
 
-function AccountHistorySheet({
-  modal,
-  onClose,
-}: {
-  modal: Modal | null;
-  onClose: () => void;
-}) {
+function AccountHistorySheet({ modal, onClose }: { modal: Modal | null; onClose: () => void }) {
   const acct = modal?.kind === 'history' ? modal.account : null;
 
   // Movements = all transactions where this account is the source or the
@@ -438,7 +435,9 @@ function AccountHistorySheet({
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium truncate">{TYPE_LABEL[acct.type]?.ru ?? 'Счёт'}</div>
             <div className="text-[12px] text-ios-hint tabular-nums">
-              {acct.type === 'credit' ? `Долг: −${fmtRub(acct.balance)}` : `Текущий остаток: ${fmtRub(acct.balance)}`}
+              {acct.type === 'credit'
+                ? `Долг: −${fmtRub(acct.balance)}`
+                : `Текущий остаток: ${fmtRub(acct.balance)}`}
             </div>
           </div>
         </div>
@@ -450,9 +449,7 @@ function AccountHistorySheet({
             ))}
           </div>
         ) : items.length === 0 ? (
-          <div className="py-12 text-center text-ios-hint text-sm">
-            Движений по счёту пока нет
-          </div>
+          <div className="py-12 text-center text-ios-hint text-sm">Движений по счёту пока нет</div>
         ) : (
           items.map((t, i) => {
             // Sign is relative to THIS account: + when the money landed here
@@ -461,11 +458,7 @@ function AccountHistorySheet({
             // The "other side" of the movement: category for an expense, source
             // for an income, the counterpart account for a transfer.
             const label =
-              (t.type === 'asset_revaluation'
-                ? incoming
-                  ? 'Прирост стоимости'
-                  : 'Обесценивание'
-                : null) ??
+              (t.type === 'asset_revaluation' ? (incoming ? 'Прирост стоимости' : 'Обесценивание') : null) ??
               t.categoryName ??
               t.incomeSourceName ??
               (incoming ? t.fromAccountName : t.toAccountName) ??
@@ -610,7 +603,14 @@ function RestockSheet({
   const cashAccounts = accounts.filter((x) => x.type === 'cash' || x.type === 'bank');
 
   return (
-    <Sheet open onClose={() => { reset(); onClose(); }} title={`Докупить: ${pos.name}`}>
+    <Sheet
+      open
+      onClose={() => {
+        reset();
+        onClose();
+      }}
+      title={`Докупить: ${pos.name}`}
+    >
       {step === 'pickSource' && (
         <div className="px-4 pb-4 pt-2 space-y-4">
           <div className="text-sm text-ios-hint leading-snug">
@@ -618,7 +618,9 @@ function RestockSheet({
           </div>
           <QtyStepper label="Количество шт" value={qty} onChange={setQty} />
           <div>
-            <div className="text-xs font-semibold uppercase text-ios-hint tracking-wider mb-2">Откуда оплачиваем</div>
+            <div className="text-xs font-semibold uppercase text-ios-hint tracking-wider mb-2">
+              Откуда оплачиваем
+            </div>
             {cashAccounts.length === 0 ? (
               <p className="text-center text-ios-hint py-6 text-sm">Нет счетов наличных или банка.</p>
             ) : (
@@ -675,7 +677,7 @@ function SellUnitsSheet({
   const [qty, setQty] = useState(1);
   const txIdRef = useRef<string>('');
 
-  const available = modal?.kind === 'sellUnits' ? modal.account.quantity ?? 0 : 0;
+  const available = modal?.kind === 'sellUnits' ? (modal.account.quantity ?? 0) : 0;
   const posId = modal?.kind === 'sellUnits' ? modal.account.id : null;
 
   // Default the quantity to the whole remaining stock when the sheet opens.
@@ -732,7 +734,14 @@ function SellUnitsSheet({
   const cashAccounts = accounts.filter((x) => x.type === 'cash' || x.type === 'bank');
 
   return (
-    <Sheet open onClose={() => { reset(); onClose(); }} title={`Продать: ${pos.name}`}>
+    <Sheet
+      open
+      onClose={() => {
+        reset();
+        onClose();
+      }}
+      title={`Продать: ${pos.name}`}
+    >
       {step === 'form' && (
         <div className="px-4 pb-4 pt-2 space-y-4">
           <div className="text-sm text-ios-hint leading-snug">
@@ -740,7 +749,9 @@ function SellUnitsSheet({
           </div>
           <QtyStepper label="Сколько продать" value={qty} onChange={setQty} max={available} />
           <div>
-            <div className="text-xs font-semibold uppercase text-ios-hint tracking-wider mb-2">Куда зачислить</div>
+            <div className="text-xs font-semibold uppercase text-ios-hint tracking-wider mb-2">
+              Куда зачислить
+            </div>
             {cashAccounts.length === 0 ? (
               <p className="text-center text-ios-hint py-6 text-sm">Нет счетов наличных или банка.</p>
             ) : (
@@ -852,7 +863,10 @@ function TopUpEditor({
   return (
     <Sheet
       open
-      onClose={() => { reset(); onClose(); }}
+      onClose={() => {
+        reset();
+        onClose();
+      }}
       title={`Пополнить "${investment.name}"`}
     >
       {step === 'pickSource' && (
@@ -914,13 +928,7 @@ function TopUpEditor({
 
 // ─── Inline confirm view inside the bottom-sheet (no tg.showConfirm) ────
 
-function ConfirmDelete({
-  modal,
-  onClose,
-}: {
-  modal: Modal | null;
-  onClose: () => void;
-}) {
+function ConfirmDelete({ modal, onClose }: { modal: Modal | null; onClose: () => void }) {
   const qc = useQueryClient();
 
   // Look up the number of transactions BEFORE the user picks an action. This
@@ -939,15 +947,18 @@ function ConfirmDelete({
   // Optimistic removal from all account-related caches — runs both for
   // soft-delete and for purge.
   const optimisticRemove = (deletedId: string) => {
-    qc.setQueryData<{
-      accounts: AccountDTO[];
-      totalCash: string;
-      totalInvestments: string;
-      totalOther: string;
-      totalCredits: string;
-      totalCreditBuffers: string;
-      totalNetWorth: string;
-    } | undefined>(['capital'], (prev) => {
+    qc.setQueryData<
+      | {
+          accounts: AccountDTO[];
+          totalCash: string;
+          totalInvestments: string;
+          totalOther: string;
+          totalCredits: string;
+          totalCreditBuffers: string;
+          totalNetWorth: string;
+        }
+      | undefined
+    >(['capital'], (prev) => {
       if (!prev) return prev;
       return { ...prev, accounts: prev.accounts.filter((a) => a.id !== deletedId) };
     });
@@ -955,12 +966,13 @@ function ConfirmDelete({
       if (!prev) return prev;
       return prev.filter((a) => a.id !== deletedId);
     });
-    qc.setQueryData<
-      { id: string; name: string; type: string; txCount: number }[] | undefined
-    >(['accounts', 'hidden'], (prev) => {
-      if (!prev) return prev;
-      return prev.filter((a) => a.id !== deletedId);
-    });
+    qc.setQueryData<{ id: string; name: string; type: string; txCount: number }[] | undefined>(
+      ['accounts', 'hidden'],
+      (prev) => {
+        if (!prev) return prev;
+        return prev.filter((a) => a.id !== deletedId);
+      },
+    );
   };
 
   const refetchAll = () =>
@@ -1173,17 +1185,18 @@ function BalanceEditor({
 
     // Optimistically update Capital in cache so the user sees the new value
     // immediately (works whether online, offline, or replaying).
-    qc.setQueryData<{
-      accounts: AccountDTO[];
-      totalCash: string;
-      totalInvestments: string;
-      totalOther: string;
-      totalNetWorth: string;
-    } | undefined>(['capital'], (prev) => {
+    qc.setQueryData<
+      | {
+          accounts: AccountDTO[];
+          totalCash: string;
+          totalInvestments: string;
+          totalOther: string;
+          totalNetWorth: string;
+        }
+      | undefined
+    >(['capital'], (prev) => {
       if (!prev) return prev;
-      const nextAccs = prev.accounts.map((acc) =>
-        acc.id === a.id ? { ...acc, balance: amountInput } : acc,
-      );
+      const nextAccs = prev.accounts.map((acc) => (acc.id === a.id ? { ...acc, balance: amountInput } : acc));
       const sumBy = (t: string) =>
         nextAccs.filter((x) => x.type === t).reduce((s, x) => s + parseFloat(x.balance || '0'), 0);
       const cash = sumBy('cash') + sumBy('bank');
@@ -1238,9 +1251,7 @@ function BalanceEditor({
         submitLabel="Сохранить"
         busy={m.isPending}
         hint={
-          a.type === 'investment'
-            ? 'Любое увеличение засчитается как прирост 📈'
-            : 'новый текущий остаток'
+          a.type === 'investment' ? 'Любое увеличение засчитается как прирост 📈' : 'новый текущий остаток'
         }
       />
     </Sheet>
@@ -1274,11 +1285,7 @@ function RenameEditor({ modal, onClose }: { modal: Modal | null; onClose: () => 
   });
   if (modal?.kind !== 'rename') return null;
   return (
-    <Sheet
-      open
-      onClose={onClose}
-      title={`Переименовать "${modal.account.name}"`}
-    >
+    <Sheet open onClose={onClose} title={`Переименовать "${modal.account.name}"`}>
       <div className="px-4 pb-4 pt-2">
         <input
           autoFocus
@@ -1375,16 +1382,14 @@ function RevalueEditor({ modal, onClose }: { modal: Modal | null; onClose: () =>
               isLoss ? 'bg-ios-red/10 text-ios-red' : 'bg-ios-green/10 text-ios-green'
             }`}
           >
-            <div className="text-[13px] opacity-80">
-              {isLoss ? 'Обесценивание' : 'Прирост стоимости'}
-            </div>
+            <div className="text-[13px] opacity-80">{isLoss ? 'Обесценивание' : 'Прирост стоимости'}</div>
             <div className="text-lg font-bold tabular-nums mt-0.5">
               {isLoss ? '−' : '+'}
               {fmtRub(Math.abs(delta))}
             </div>
             <div className="text-[12px] opacity-80 mt-1">
-              Станет {fmtRub(nv)} · деньги не тронутся, {isLoss ? 'убыток' : 'прирост'} уйдёт в
-              «Переоценку активов»
+              Станет {fmtRub(nv)} · деньги не тронутся, {isLoss ? 'убыток' : 'прирост'} уйдёт в «Переоценку
+              активов»
             </div>
           </div>
         )}
@@ -1493,10 +1498,10 @@ function InvestmentsSheet({ modal, onClose }: { modal: Modal | null; onClose: ()
               </div>
               {!isLiability && (
                 <div className="flex justify-between text-sm pt-2 border-t border-ios-divider">
-                  <span className="text-ios-hint">
-                    Маржа при текущей оценке ({fmtRub(d.currentValue)})
-                  </span>
-                  <span className={`tabular-nums font-semibold ${margin < 0 ? 'text-ios-red' : 'text-ios-green'}`}>
+                  <span className="text-ios-hint">Маржа при текущей оценке ({fmtRub(d.currentValue)})</span>
+                  <span
+                    className={`tabular-nums font-semibold ${margin < 0 ? 'text-ios-red' : 'text-ios-green'}`}
+                  >
                     {margin < 0 ? '−' : '+'}
                     {fmtRub(Math.abs(margin), { compact: true })}
                   </span>
@@ -1521,14 +1526,15 @@ function InvestmentsSheet({ modal, onClose }: { modal: Modal | null; onClose: ()
                         {it.comment ? ` · ${it.comment}` : ''}
                       </div>
                     </div>
-                    <span className="text-sm tabular-nums shrink-0">−{fmtRub(it.amount, { compact: true })}</span>
+                    <span className="text-sm tabular-nums shrink-0">
+                      −{fmtRub(it.amount, { compact: true })}
+                    </span>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="text-center text-ios-hint text-[13px] py-4">
-                Пока нет привязанных расходов. При добавлении расхода выбери эту технику в
-                «Для техники».
+                Пока нет привязанных расходов. При добавлении расхода выбери эту технику в «Для техники».
               </div>
             )}
           </>
@@ -1723,9 +1729,8 @@ function PrepaymentEditor({
       {step === 'pickDest' && (
         <div className="px-4 pb-4 pt-2">
           <div className="text-sm text-ios-hint mb-3">
-            Куда зачислить полученную часть? Остаток по активу уменьшится; когда он
-            дойдёт до нуля — актив закроется. Прибыль засчитается, если получишь больше
-            остаточной стоимости.
+            Куда зачислить полученную часть? Остаток по активу уменьшится; когда он дойдёт до нуля — актив
+            закроется. Прибыль засчитается, если получишь больше остаточной стоимости.
           </div>
           <div className="space-y-1.5">
             {cashAccounts.map((a) => (
@@ -1764,11 +1769,35 @@ function PrepaymentEditor({
 
 type NewAccountType = 'bank' | 'cash' | 'investment' | 'other_asset';
 
-const NEW_ACCOUNT_TYPES: { id: NewAccountType; icon: IconName; label: string; placeholder: string; hint: string }[] = [
-  { id: 'bank', icon: 'bank', label: 'Банк', placeholder: 'например, ВТБ', hint: 'Дебетовый/кредитный счёт в банке' },
+const NEW_ACCOUNT_TYPES: {
+  id: NewAccountType;
+  icon: IconName;
+  label: string;
+  placeholder: string;
+  hint: string;
+}[] = [
+  {
+    id: 'bank',
+    icon: 'bank',
+    label: 'Банк',
+    placeholder: 'например, ВТБ',
+    hint: 'Дебетовый/кредитный счёт в банке',
+  },
   { id: 'cash', icon: 'cash', label: 'Наличные', placeholder: 'например, Карман', hint: 'Кэш на руках' },
-  { id: 'investment', icon: 'investment', label: 'Инвестиция', placeholder: 'например, Сбер вклад 12%', hint: 'Вклад, брокерский счёт, ОФЗ — увеличение учитывается как прирост капитала' },
-  { id: 'other_asset', icon: 'other_asset', label: 'Прочий актив', placeholder: 'например, Машина', hint: 'Имущество, ценности — учитывается в Net Worth, но не в инвестициях' },
+  {
+    id: 'investment',
+    icon: 'investment',
+    label: 'Инвестиция',
+    placeholder: 'например, Сбер вклад 12%',
+    hint: 'Вклад, брокерский счёт, ОФЗ — увеличение учитывается как прирост капитала',
+  },
+  {
+    id: 'other_asset',
+    icon: 'other_asset',
+    label: 'Прочий актив',
+    placeholder: 'например, Машина',
+    hint: 'Имущество, ценности — учитывается в Net Worth, но не в инвестициях',
+  },
 ];
 
 function AddBankSheet({ modal, onClose }: { modal: Modal | null; onClose: () => void }) {
@@ -1809,7 +1838,14 @@ function AddBankSheet({ modal, onClose }: { modal: Modal | null; onClose: () => 
   const meta = NEW_ACCOUNT_TYPES.find((t) => t.id === type)!;
 
   return (
-    <Sheet open onClose={() => { reset(); onClose(); }} title="Новый счёт">
+    <Sheet
+      open
+      onClose={() => {
+        reset();
+        onClose();
+      }}
+      title="Новый счёт"
+    >
       <div className="px-4 pb-4 pt-2 space-y-3">
         {/* 2x2 type picker — investment and other_asset are first-class
             citizens here, not buried in a "Покупка" flow */}
@@ -1862,7 +1898,10 @@ function AddBankSheet({ modal, onClose }: { modal: Modal | null; onClose: () => 
         <div className="flex gap-2 pt-1">
           <button
             type="button"
-            onClick={() => { reset(); onClose(); }}
+            onClick={() => {
+              reset();
+              onClose();
+            }}
             className="flex-1 bg-ios-surface rounded-ios py-3 font-medium"
           >
             Отмена
@@ -1947,7 +1986,14 @@ function AddCreditSheet({ modal, onClose }: { modal: Modal | null; onClose: () =
   })();
 
   return (
-    <Sheet open onClose={() => { reset(); onClose(); }} title="Новый кредит">
+    <Sheet
+      open
+      onClose={() => {
+        reset();
+        onClose();
+      }}
+      title="Новый кредит"
+    >
       <div className="px-4 pb-4 pt-2 space-y-3">
         <div className="bg-ios-surface rounded-ios-lg p-4">
           <label className="block text-xs font-semibold uppercase text-ios-hint tracking-wider">
@@ -2014,9 +2060,7 @@ function AddCreditSheet({ modal, onClose }: { modal: Modal | null; onClose: () =
             type="text"
             inputMode="numeric"
             value={paymentDay}
-            onChange={(e) =>
-              setPaymentDay(e.target.value.replace(/[^\d]/g, '').slice(0, 2))
-            }
+            onChange={(e) => setPaymentDay(e.target.value.replace(/[^\d]/g, '').slice(0, 2))}
             placeholder="15"
             className="w-full bg-transparent outline-none text-lg mt-2 placeholder:text-ios-hint tabular-nums"
           />
@@ -2031,7 +2075,10 @@ function AddCreditSheet({ modal, onClose }: { modal: Modal | null; onClose: () =
         <div className="flex gap-2 pt-1">
           <button
             type="button"
-            onClick={() => { reset(); onClose(); }}
+            onClick={() => {
+              reset();
+              onClose();
+            }}
             className="flex-1 bg-ios-surface rounded-ios py-3 font-medium"
           >
             Отмена

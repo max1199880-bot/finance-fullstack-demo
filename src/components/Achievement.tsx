@@ -90,7 +90,6 @@ function Confetti() {
   const pieces = Array.from({ length: 28 }).map((_, i) => {
     const colors = ['#FF3B30', '#FF9F0A', '#FFD60A', '#34C759', '#007AFF', '#5856D6', '#FF2D55', '#AF52DE'];
     const left = Math.random() * 100;
-    const drift = (Math.random() - 0.5) * 60;
     const duration = 1.5 + Math.random() * 1.5;
     const delay = Math.random() * 0.4;
     const size = 6 + Math.random() * 8;

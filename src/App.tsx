@@ -1,31 +1,32 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Navigate,
-  useNavigate,
-  useLocation,
-} from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { applyTelegramTheme } from './lib/telegram';
 import { api } from './lib/api';
+import { trackPageView } from './lib/analytics';
 import { TabBar, type Tab } from './components/TabBar';
 import { Onboarding } from './components/Onboarding';
 import { OfflineBanner } from './components/OfflineBanner';
 import { UpdatePrompt } from './components/UpdatePrompt';
 import { AuthGate } from './components/AuthGate';
-import { PushPermissionPrompt } from './components/PushPermissionPrompt';
 import { InstallPrompt } from './components/InstallPrompt';
 import { LoginPage } from './pages/Login';
 import { HomePage } from './pages/Home';
-import { AddPage } from './pages/Add';
-import { BudgetPage } from './pages/Budget';
-import { CapitalPage } from './pages/Capital';
-import { AnalyticsPage } from './pages/Analytics';
-import { SettingsPage } from './pages/Settings';
-import { CategoryEditorPage } from './pages/CategoryEditor';
-import { IncomeSourceEditorPage } from './pages/IncomeSourceEditor';
+// Вход и главная — в основном файле: с них начинается любой запуск. Остальные экраны
+// грузятся при первом переходе: «Капитал» один занимает две тысячи строк, и платить за
+// него на экране входа незачем. Офлайн это не ломает — сервис-воркер заранее кладёт
+// в кеш все части сборки.
+const AddPage = lazy(() => import('./pages/Add').then((m) => ({ default: m.AddPage })));
+const BudgetPage = lazy(() => import('./pages/Budget').then((m) => ({ default: m.BudgetPage })));
+const CapitalPage = lazy(() => import('./pages/Capital').then((m) => ({ default: m.CapitalPage })));
+const AnalyticsPage = lazy(() => import('./pages/Analytics').then((m) => ({ default: m.AnalyticsPage })));
+const SettingsPage = lazy(() => import('./pages/Settings').then((m) => ({ default: m.SettingsPage })));
+const CategoryEditorPage = lazy(() =>
+  import('./pages/CategoryEditor').then((m) => ({ default: m.CategoryEditorPage })),
+);
+const IncomeSourceEditorPage = lazy(() =>
+  import('./pages/IncomeSourceEditor').then((m) => ({ default: m.IncomeSourceEditorPage })),
+);
 
 // Single source of truth mapping a tab id to its URL.
 const TAB_PATH: Record<Tab, string> = {
@@ -69,6 +70,12 @@ function AppShell() {
   const qc = useQueryClient();
   const [forcedOnboarding, setForcedOnboarding] = useState(false);
 
+  // Приложение одностраничное: браузер не перезагружает страницу, поэтому просмотр
+  // экрана отправляем в Метрику сами при каждой смене маршрута.
+  useEffect(() => {
+    trackPageView(location.pathname);
+  }, [location.pathname]);
+
   const me = useQuery({ queryKey: ['me'], queryFn: api.me, staleTime: 60_000 });
 
   useEffect(() => {
@@ -105,7 +112,11 @@ function AppShell() {
       if (cancelled) return;
       qc.prefetchQuery({ queryKey: ['budget', 'current'], queryFn: () => api.budget(), staleTime: 15_000 });
       qc.prefetchQuery({ queryKey: ['capital'], queryFn: api.capital, staleTime: 15_000 });
-      qc.prefetchQuery({ queryKey: ['cats', 'expense'], queryFn: api.expenseCategories, staleTime: 5 * 60_000 });
+      qc.prefetchQuery({
+        queryKey: ['cats', 'expense'],
+        queryFn: api.expenseCategories,
+        staleTime: 5 * 60_000,
+      });
       qc.prefetchQuery({ queryKey: ['sources'], queryFn: api.incomeSources, staleTime: 5 * 60_000 });
       qc.prefetchQuery({ queryKey: ['accounts'], queryFn: () => api.accounts(), staleTime: 60_000 });
     };
@@ -124,8 +135,14 @@ function AppShell() {
       const now = new Date();
       const from = new Date(now.getTime() - 30 * 86400000).toISOString();
       const to = now.toISOString();
-      qc.prefetchQuery({ queryKey: ['analytics', 'summary', '30d'], queryFn: () => api.analyticsSummary(from, to) });
-      qc.prefetchQuery({ queryKey: ['analytics', 'byCategory', '30d'], queryFn: () => api.analyticsByCategory(from, to, 12) });
+      qc.prefetchQuery({
+        queryKey: ['analytics', 'summary', '30d'],
+        queryFn: () => api.analyticsSummary(from, to),
+      });
+      qc.prefetchQuery({
+        queryKey: ['analytics', 'byCategory', '30d'],
+        queryFn: () => api.analyticsByCategory(from, to, 12),
+      });
     }
     if (next === 'settings') qc.prefetchQuery({ queryKey: ['me'], queryFn: api.me, staleTime: 60_000 });
   };
@@ -146,49 +163,54 @@ function AppShell() {
       <OfflineBanner />
       <UpdatePrompt />
 
-      <Routes>
-        {/* Public — reachable without a session. */}
-        <Route path="/login" element={<LoginPage />} />
+      {/* Пока часть экрана грузится — пустой фон того же цвета, без мигания спиннера:
+          части маленькие и из кеша приходят за доли секунды. */}
+      <Suspense fallback={<div className="min-h-full bg-ios-bg" />}>
+        <Routes>
+          {/* Public — reachable without a session. */}
+          <Route path="/login" element={<LoginPage />} />
 
-        {/* Everything else requires auth (session cookie or Telegram initData). */}
-        <Route element={<AuthGate />}>
-          <Route path="/" element={<HomePage onGoTo={goTab} />} />
-          <Route path="/add" element={<AddPage onDone={() => navigate('/')} />} />
-          <Route path="/budget" element={<BudgetPage />} />
-          <Route path="/capital" element={<CapitalPage />} />
-          <Route path="/analytics" element={<AnalyticsPage />} />
-          <Route
-            path="/settings"
-            element={
-              <SettingsPage
-                onBack={() => navigate('/')}
-                onOpenCategories={() => navigate('/settings/categories')}
-                onOpenIncomeSources={() => navigate('/settings/income-sources')}
-                onReplayOnboarding={() => setForcedOnboarding(true)}
-                onOpenAdmin={() => navigate('/admin')}
-              />
-            }
-          />
-          <Route
-            path="/settings/categories"
-            element={<CategoryEditorPage onBack={() => navigate('/settings')} />}
-          />
-          <Route
-            path="/settings/income-sources"
-            element={<IncomeSourceEditorPage onBack={() => navigate('/settings')} />}
-          />
-          {/* Демо: админ-панель владельца в публичную копию не входит (у демо-пользователя isOwner=false). */}
-          {/* Unknown path → home. */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
+          {/* Everything else requires auth (session cookie or Telegram initData). */}
+          <Route element={<AuthGate />}>
+            <Route path="/" element={<HomePage onGoTo={goTab} />} />
+            <Route path="/add" element={<AddPage onDone={() => navigate('/')} />} />
+            <Route path="/budget" element={<BudgetPage />} />
+            <Route path="/capital" element={<CapitalPage />} />
+            <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route
+              path="/settings"
+              element={
+                <SettingsPage
+                  onBack={() => navigate('/')}
+                  onOpenCategories={() => navigate('/settings/categories')}
+                  onOpenIncomeSources={() => navigate('/settings/income-sources')}
+                  onReplayOnboarding={() => setForcedOnboarding(true)}
+                  onOpenAdmin={() => navigate('/admin')}
+                />
+              }
+            />
+            <Route
+              path="/settings/categories"
+              element={<CategoryEditorPage onBack={() => navigate('/settings')} />}
+            />
+            <Route
+              path="/settings/income-sources"
+              element={<IncomeSourceEditorPage onBack={() => navigate('/settings')} />}
+            />
+            {/* Демо: админ-панель владельца в публичную копию не входит (у демо-пользователя isOwner=false). */}
+            {/* Unknown path → home. */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      </Suspense>
 
       {showTabBar && <TabBar active={activeTab} onChange={goTab} />}
 
       {location.pathname !== '/login' && (
         <>
           <InstallPrompt />
-          <PushPermissionPrompt />
+          {/* Push-уведомления в этой версии не подключены (нет эндпоинтов /push/* на
+              бэкенде) — предложение подписаться только порождало бы ошибки 404. */}
         </>
       )}
 

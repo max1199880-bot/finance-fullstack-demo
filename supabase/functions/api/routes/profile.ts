@@ -52,7 +52,8 @@ export const routes: Route[] = [
         patch.month_start_day = d;
       }
       if (typeof body.remindersEnabled === 'boolean') patch.reminders_enabled = body.remindersEnabled;
-      if (typeof body.onboardingCompleted === 'boolean') patch.onboarding_completed = body.onboardingCompleted;
+      if (typeof body.onboardingCompleted === 'boolean')
+        patch.onboarding_completed = body.onboardingCompleted;
 
       if (Object.keys(patch).length) {
         const { error } = await ctx.db.from('profiles').update(patch).eq('id', ctx.userId);

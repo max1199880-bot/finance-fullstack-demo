@@ -1,6 +1,14 @@
 import { type ReactNode } from 'react';
 
-export function Card({ children, className = '', title }: { children: ReactNode; className?: string; title?: string }) {
+export function Card({
+  children,
+  className = '',
+  title,
+}: {
+  children: ReactNode;
+  className?: string;
+  title?: string;
+}) {
   return (
     <section className={`mb-5 ${className}`}>
       {title && (
@@ -44,9 +52,7 @@ export function ListRow({
       <div className="flex-1 min-w-0">{left}</div>
       {right && <div className="text-right text-ios-hint shrink-0">{right}</div>}
       {bottom}
-      {divider && (
-        <div className="absolute left-4 right-0 bottom-0 h-px bg-ios-divider last:hidden" />
-      )}
+      {divider && <div className="absolute left-4 right-0 bottom-0 h-px bg-ios-divider last:hidden" />}
     </div>
   );
 }

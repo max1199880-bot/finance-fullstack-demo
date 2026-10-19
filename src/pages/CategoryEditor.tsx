@@ -62,7 +62,9 @@ export function CategoryEditorPage({ onBack }: { onBack: () => void }) {
       await qc.invalidateQueries({ queryKey: ['categories'] });
       await qc.invalidateQueries({ queryKey: ['cats'] });
       if (res.action === 'hidden') {
-        alertDialog('У категории есть операции, поэтому она скрыта (история сохранена). Можно восстановить, создав снова с тем же именем.');
+        alertDialog(
+          'У категории есть операции, поэтому она скрыта (история сохранена). Можно восстановить, создав снова с тем же именем.',
+        );
       }
     },
     onError: (e) => {
@@ -175,18 +177,9 @@ export function CategoryEditorPage({ onBack }: { onBack: () => void }) {
         )}
       </div>
 
-      <RenameSheet
-        cat={renameTarget}
-        onClose={() => setRenameTarget(null)}
-      />
-      <CreateSheet
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-      />
-      <EmojiSheet
-        cat={emojiTarget}
-        onClose={() => setEmojiTarget(null)}
-      />
+      <RenameSheet cat={renameTarget} onClose={() => setRenameTarget(null)} />
+      <CreateSheet open={createOpen} onClose={() => setCreateOpen(false)} />
+      <EmojiSheet cat={emojiTarget} onClose={() => setEmojiTarget(null)} />
     </div>
   );
 }
@@ -220,11 +213,7 @@ function EmojiSheet({ cat, onClose }: { cat: CatRow | null; onClose: () => void 
 
 function HeaderBack({ onClick }: { onClick: () => void }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="text-ios-accent text-base font-medium select-none-ui"
-    >
+    <button type="button" onClick={onClick} className="text-ios-accent text-base font-medium select-none-ui">
       Готово
     </button>
   );

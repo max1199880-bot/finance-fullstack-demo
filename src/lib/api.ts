@@ -79,7 +79,11 @@ export interface CategoryDTO {
   isActive: boolean;
   emoji?: string | null;
 }
-export interface IncomeSourceDTO { id: string; name: string; emoji?: string | null }
+export interface IncomeSourceDTO {
+  id: string;
+  name: string;
+  emoji?: string | null;
+}
 export interface AccountDTO {
   id: string;
   name: string;
@@ -97,7 +101,7 @@ export interface CreditSummaryDTO {
   name: string;
   currentPrincipal: string;
   originalAmount: string;
-  rate: string;             // annual %
+  rate: string; // annual %
   termMonths: number;
   remainingMonths: number;
   scheduledPayment: string;
@@ -201,8 +205,8 @@ export function isAuthError(e: unknown): boolean {
  * («/api/transactions»), поэтому экраны не переписывались — здесь подставляется
  * базовый адрес функции и срезается префикс /api.
  */
-const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
-  `${SUPABASE_URL}/functions/v1/api`;
+export const API_BASE =
+  (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? `${SUPABASE_URL}/functions/v1/api`;
 
 /**
  * Гасим сессию при отказе сервера — но только если отказали именно тому токену,
@@ -212,7 +216,9 @@ const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
 async function handleRejectedToken(usedToken: string | undefined): Promise<void> {
   if (!usedToken) return;
   const { data } = await supabase.auth.getSession();
-  if (data.session?.access_token === usedToken) await supabase.auth.signOut();
+  // scope 'local' — выходим только на этом устройстве. Глобальный выход демо-аккаунта
+  // выкидывал бы всех, кто сейчас его смотрит.
+  if (data.session?.access_token === usedToken) await supabase.auth.signOut({ scope: 'local' });
 }
 
 async function call<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -258,11 +264,7 @@ async function call<T>(path: string, options: RequestInit = {}): Promise<T> {
 export const api = {
   bootstrap: (txLimit = 5) => call<BootstrapDTO>(`/api/bootstrap?txLimit=${txLimit}`),
   me: () => call<MeDTO>('/api/me'),
-  updateMe: (body: {
-    monthStartDay?: number;
-    remindersEnabled?: boolean;
-    onboardingCompleted?: boolean;
-  }) =>
+  updateMe: (body: { monthStartDay?: number; remindersEnabled?: boolean; onboardingCompleted?: boolean }) =>
     call<{ ok: true; onboardingCompleted?: boolean }>('/api/me', {
       method: 'PUT',
       body: JSON.stringify(body),
@@ -304,10 +306,7 @@ export const api = {
   deleteCategory: (id: string) =>
     call<{ ok: true; action: 'deleted' | 'hidden' }>(`/api/categories/${id}`, { method: 'DELETE' }),
   purgeCategory: (id: string) =>
-    call<{ ok: true; deletedTransactions: number }>(
-      `/api/categories/${id}/purge`,
-      { method: 'DELETE' },
-    ),
+    call<{ ok: true; deletedTransactions: number }>(`/api/categories/${id}/purge`, { method: 'DELETE' }),
   hiddenCategories: () =>
     call<
       {
@@ -345,21 +344,16 @@ export const api = {
       body: JSON.stringify({ isActive }),
     }),
   deleteIncomeSource: (id: string) =>
-    call<{ ok: true; action: 'deleted' | 'hidden'; reason?: string }>(
-      `/api/income-sources/${id}`,
-      { method: 'DELETE' },
-    ),
+    call<{ ok: true; action: 'deleted' | 'hidden'; reason?: string }>(`/api/income-sources/${id}`, {
+      method: 'DELETE',
+    }),
   purgeIncomeSource: (id: string) =>
-    call<{ ok: true; deletedTransactions: number }>(
-      `/api/income-sources/${id}/purge`,
-      { method: 'DELETE' },
-    ),
+    call<{ ok: true; deletedTransactions: number }>(`/api/income-sources/${id}/purge`, { method: 'DELETE' }),
   hiddenIncomeSources: () =>
     call<{ id: string; name: string; emoji?: string | null; txCount: number }[]>(
       '/api/income-sources/hidden',
     ),
-  accounts: (kind?: 'cash_or_bank') =>
-    call<AccountDTO[]>(`/api/accounts${kind ? `?type=${kind}` : ''}`),
+  accounts: (kind?: 'cash_or_bank') => call<AccountDTO[]>(`/api/accounts${kind ? `?type=${kind}` : ''}`),
 
   // `clientTxId` is an idempotency key — a stable UUID generated once per
   // logical operation. It survives retries and offline-replay (stored in the
@@ -443,8 +437,7 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(b),
     }),
-  deleteTransaction: (id: string) =>
-    call<{ ok: true }>(`/api/transactions/${id}`, { method: 'DELETE' }),
+  deleteTransaction: (id: string) => call<{ ok: true }>(`/api/transactions/${id}`, { method: 'DELETE' }),
 
   budget: (month?: string) => call<BudgetDTO>(`/api/budget${month ? `?month=${month}` : ''}`),
   setCategoryPlan: (b: { month?: string; categoryId: string; amount: string | number }) =>
@@ -531,10 +524,9 @@ export const api = {
   // Smart delete — backend tries hard-delete, falls back to soft-hide when the
   // account has transaction history. Result includes which path was taken.
   deleteAccount: (id: string) =>
-    call<{ ok: true; action: 'deleted' | 'hidden'; reason?: string }>(
-      `/api/accounts/${id}`,
-      { method: 'DELETE' },
-    ),
+    call<{ ok: true; action: 'deleted' | 'hidden'; reason?: string }>(`/api/accounts/${id}`, {
+      method: 'DELETE',
+    }),
   // Backwards-compat alias
   hideAccount: (id: string) =>
     call<{ ok: true; action: 'deleted' | 'hidden' }>(`/api/accounts/${id}`, { method: 'DELETE' }),
@@ -599,12 +591,10 @@ export const api = {
       body: JSON.stringify({ isActive: true }),
     }),
   purgeAccount: (id: string) =>
-    call<{ ok: true; deletedTransactions: number; deletedBalances: number }>(
-      `/api/accounts/${id}/purge`,
-      { method: 'DELETE' },
-    ),
-  accountTxCount: (id: string) =>
-    call<{ count: number }>(`/api/accounts/${id}/tx-count`),
+    call<{ ok: true; deletedTransactions: number; deletedBalances: number }>(`/api/accounts/${id}/purge`, {
+      method: 'DELETE',
+    }),
+  accountTxCount: (id: string) => call<{ count: number }>(`/api/accounts/${id}/tx-count`),
 
   sellAsset: (
     id: string,
@@ -642,10 +632,7 @@ export const api = {
       body: JSON.stringify(b),
     }),
 
-  revalueAsset: (
-    id: string,
-    b: { newValue: string | number; comment?: string; clientTxId?: string },
-  ) =>
+  revalueAsset: (id: string, b: { newValue: string | number; comment?: string; clientTxId?: string }) =>
     call<{
       ok: true;
       revalTransactionId: string;
@@ -694,10 +681,10 @@ export const api = {
     propagateMonths?: number;
     onlyEmpty?: boolean;
   }) =>
-    call<{ ok: true; written: number; skipped: number; months: number }>(
-      '/api/budget/category/propagate',
-      { method: 'PUT', body: JSON.stringify(b) },
-    ),
+    call<{ ok: true; written: number; skipped: number; months: number }>('/api/budget/category/propagate', {
+      method: 'PUT',
+      body: JSON.stringify(b),
+    }),
 
   // Feedback — saved to DB and forwarded to bot owner
   sendFeedback: (message: string) =>
@@ -707,8 +694,7 @@ export const api = {
     }),
 
   // Admin (owner-only). Returns 403 to non-owners.
-  adminUsers: () =>
-    call<{ totalUsers: number; users: AdminUserRow[] }>('/api/admin/users'),
+  adminUsers: () => call<{ totalUsers: number; users: AdminUserRow[] }>('/api/admin/users'),
   adminAggregate: (from?: string, to?: string) => {
     const qs = new URLSearchParams();
     if (from) qs.set('from', from);
@@ -809,13 +795,12 @@ export const api = {
 
   // ── PWA auth (Telegram Login Widget → cookie session) ────────────────────
   telegramLogin: (payload: TelegramLoginPayload) =>
-    call<{ ok: true; user: { id: string; firstName: string | null } }>(
-      '/api/auth/telegram-login',
-      { method: 'POST', body: JSON.stringify(payload) },
-    ),
+    call<{ ok: true; user: { id: string; firstName: string | null } }>('/api/auth/telegram-login', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
   logout: () => call<{ ok: true }>('/api/auth/logout', { method: 'POST' }),
-  authMe: () =>
-    call<{ id: string; firstName: string | null; telegramUserId: string }>('/api/auth/me'),
+  authMe: () => call<{ id: string; firstName: string | null; telegramUserId: string }>('/api/auth/me'),
   authWidgetConfig: () => call<{ botUsername: string }>('/api/auth/widget-config'),
 
   // ── Web Push ─────────────────────────────────────────────────────────────

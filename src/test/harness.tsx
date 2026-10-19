@@ -80,4 +80,5 @@ export function renderScreen(ui: ReactElement, client: QueryClient = testQueryCl
 }
 
 /** fmtRub прода ставит неразрывные пробелы между разрядами — нормализуем для сравнений. */
-export const norm = (s: string | null | undefined) => (s ?? '').replace(/[  ]/g, ' ').replace(/\s+/g, ' ').trim();
+export const norm = (s: string | null | undefined) =>
+  (s ?? '').replace(/[  ]/g, ' ').replace(/\s+/g, ' ').trim();

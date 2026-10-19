@@ -16,7 +16,6 @@ export function UpdatePrompt() {
       console.log('[sw] registered', { swUrl, scope: registration?.scope });
     },
     onRegisterError(error) {
-      // eslint-disable-next-line no-console
       console.error('[sw] registration failed', error);
     },
   });
@@ -27,11 +26,7 @@ export function UpdatePrompt() {
     <div className="fixed inset-x-3 bottom-24 z-50 flex items-center justify-between gap-3 rounded-ios-lg bg-ios-accent px-4 py-3 text-white shadow-card">
       <span className="text-sm font-medium">Доступна новая версия</span>
       <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setNeedRefresh(false)}
-          className="text-sm opacity-80"
-        >
+        <button type="button" onClick={() => setNeedRefresh(false)} className="text-sm opacity-80">
           Позже
         </button>
         <button

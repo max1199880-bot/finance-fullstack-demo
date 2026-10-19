@@ -8,7 +8,14 @@ import type { DemoStore } from '../demo/store';
 import { balanceOf } from '../demo/ledger';
 import { Route, Routes } from 'react-router-dom';
 import { AuthGate } from '../components/AuthGate';
-import { freezeClock, installTestServer, norm, renderScreen, testQueryClient, type Network } from '../test/harness';
+import {
+  freezeClock,
+  installTestServer,
+  norm,
+  renderScreen,
+  testQueryClient,
+  type Network,
+} from '../test/harness';
 import { AddPage } from './Add';
 import { BudgetPage } from './Budget';
 import { HomePage } from './Home';
@@ -89,19 +96,24 @@ describe('Вход в PWA (AuthGate)', () => {
 
   it('без сессии показывается экран входа', async () => {
     const { supabase } = await import('../lib/supabase');
-    const empty = vi.spyOn(supabase.auth, 'getSession').mockResolvedValue(
-      { data: { session: null }, error: null } as Awaited<ReturnType<typeof supabase.auth.getSession>>,
-    );
+    const empty = vi
+      .spyOn(supabase.auth, 'getSession')
+      .mockResolvedValue({ data: { session: null }, error: null } as Awaited<
+        ReturnType<typeof supabase.auth.getSession>
+      >);
     renderGate();
     expect(await screen.findByText('Экран входа')).toBeInTheDocument();
     empty.mockRestore();
   });
 
-  it.each([401, 403])('сервер отклонил токен (%i) — приложение сообщает об этом, а не молчит', async (status) => {
-    network.authStatus = status;
-    const { api, isAuthError } = await import('../lib/api');
-    await expect(api.authMe()).rejects.toSatisfy((e: unknown) => isAuthError(e));
-  });
+  it.each([401, 403])(
+    'сервер отклонил токен (%i) — приложение сообщает об этом, а не молчит',
+    async (status) => {
+      network.authStatus = status;
+      const { api, isAuthError } = await import('../lib/api');
+      await expect(api.authMe()).rejects.toSatisfy((e: unknown) => isAuthError(e));
+    },
+  );
 
   it('ответ 401 гасит сессию, чтобы приложение вернулось на экран входа', async () => {
     network.authStatus = 401;
@@ -121,7 +133,9 @@ describe('Бюджет', () => {
     const first = await screen.findByText('Транспорт');
     const row = first.closest('button') ?? (first.parentElement as HTMLElement);
     expect(norm(row.textContent)).toContain('121%');
-    const names = screen.getAllByText(/^(Транспорт|Дом\/связь|Еда вне дома|Продукты)$/).map((el) => el.textContent);
+    const names = screen
+      .getAllByText(/^(Транспорт|Дом\/связь|Еда вне дома|Продукты)$/)
+      .map((el) => el.textContent);
     expect(names.slice(0, 3)).toEqual(['Транспорт', 'Дом/связь', 'Еда вне дома']);
   });
 });
@@ -145,7 +159,12 @@ describe('Добавить операцию', () => {
 
     await waitFor(() => expect(onDone).toHaveBeenCalled());
     const saved = store.db.transactions.at(-1);
-    expect(saved).toMatchObject({ type: 'expense', amount: 45_000, categoryId: 'cat-0', fromAccountId: 'acc-tinkoff' });
+    expect(saved).toMatchObject({
+      type: 'expense',
+      amount: 45_000,
+      categoryId: 'cat-0',
+      fromAccountId: 'acc-tinkoff',
+    });
     expect(balanceOf(store.db, 'acc-tinkoff')).toBe(before - 45_000);
   });
 

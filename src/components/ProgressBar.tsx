@@ -1,13 +1,7 @@
 import { STATUS_BAR } from '../lib/format';
 import type { FactStatus } from '../lib/api';
 
-export function ProgressBar({
-  percent,
-  status,
-}: {
-  percent: number | null;
-  status: FactStatus;
-}) {
+export function ProgressBar({ percent, status }: { percent: number | null; status: FactStatus }) {
   const pct = Math.min(Math.max(percent ?? 0, 0), 130); // clamp visual to 130%
   const overflow = (percent ?? 0) > 100;
   return (

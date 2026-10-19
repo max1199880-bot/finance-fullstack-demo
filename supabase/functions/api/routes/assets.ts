@@ -2,10 +2,10 @@
 // остаток счёта, но и остаток долга, себестоимость партий и классификацию имущества.
 //
 // Три правила, из которых вырос весь файл:
-//   1. Остаток — последняя по дате запись в account_balances. Две записи на один счёт
-//      с одинаковой датой читаются в непредсказуемом порядке (account_balance сортирует
-//      по date desc, id desc, а id — случайный uuid). Поэтому второй сдвиг того же счёта
-//      в рамках одного запроса всегда идёт на миллисекунду позже.
+//   1. Остаток — последняя записанная (seq) строка account_balances, а не последняя
+//      по дате: дата — момент начала запроса, и у параллельных запросов её порядок не
+//      совпадает с порядком записи. Сдвиг того же счёта в рамках одного запроса по-прежнему
+//      идёт на миллисекунду позже — так история по датам остаётся читаемой.
 //   2. post_transaction двигает остатки сам. Значит через него проходят только те
 //      операции, у которых движение денег совпадает с правилом «со счёта-источника
 //      списали, на счёт-получатель начислили».
@@ -360,10 +360,11 @@ export const routes: Route[] = [
       // Список колонок собран конкатенацией, поэтому его форму выводим сами.
       const rows = (data ?? []) as unknown as AccountRow[];
       // Остатки долга — одним запросом на все кредиты, иначе N запросов на экран.
-      const balances = await balancesOf(ctx, rows.map((r) => r.id));
-      return rows
-        .map((r) => creditDTO(r, balances.get(r.id) ?? 0, now))
-        .sort(byNameRu);
+      const balances = await balancesOf(
+        ctx,
+        rows.map((r) => r.id),
+      );
+      return rows.map((r) => creditDTO(r, balances.get(r.id) ?? 0, now)).sort(byNameRu);
     },
   },
 
@@ -450,10 +451,12 @@ export const routes: Route[] = [
       if (category.error) throw new Error(category.error.message);
       if (!category.data) throw badRequest('Category not found');
       if (!UUID_RE.test(fromAccountId)) throw badRequest('Source account not found');
-      const from = await requireAccount(ctx, fromAccountId, 'Source account not found').catch((e: unknown) => {
-        if (e instanceof HttpError && e.status === 404) throw badRequest('Source account not found');
-        throw e;
-      });
+      const from = await requireAccount(ctx, fromAccountId, 'Source account not found').catch(
+        (e: unknown) => {
+          if (e instanceof HttpError && e.status === 404) throw badRequest('Source account not found');
+          throw e;
+        },
+      );
       if (from.type !== 'cash' && from.type !== 'bank') throw badRequest('Source must be cash or bank');
 
       const date = dateOf(body, new Date());
@@ -474,9 +477,8 @@ export const routes: Route[] = [
 
       // Пользователю же показываем переплату отдельно: проценты за месяц — это одно,
       // а деньги сверх долга — другое.
-      const monthlyInterest = debt > 0
-        ? Math.min(amount, Math.round((debt * Number(credit.credit_rate ?? 0)) / 12 / 100))
-        : 0;
+      const monthlyInterest =
+        debt > 0 ? Math.min(amount, Math.round((debt * Number(credit.credit_rate ?? 0)) / 12 / 100)) : 0;
       const overpayment = amount - principal - monthlyInterest;
 
       const comment = commentOf(body) ?? `Платёж по кредиту: ${credit.name}`;
@@ -553,8 +555,8 @@ export const routes: Route[] = [
       const accountId = String(created.data.id);
 
       const total = unit * qty;
-      const comment = commentOf(body) ??
-        (qty > 1 ? `Покупка: ${name} (${qty} шт × ${rub(unit)})` : `Покупка: ${name}`);
+      const comment =
+        commentOf(body) ?? (qty > 1 ? `Покупка: ${name} (${qty} шт × ${rub(unit)})` : `Покупка: ${name}`);
       const transactionId = await post(ctx, {
         type: purchaseTxType(assetType),
         amount: total,
@@ -687,9 +689,7 @@ export const routes: Route[] = [
       });
 
       const profit = saleAmount - costBasis;
-      const incomeTransactionId = profit > 0
-        ? await bookProfit(ctx, asset.name, to.id, profit, now)
-        : null;
+      const incomeTransactionId = profit > 0 ? await bookProfit(ctx, asset.name, to.id, profit, now) : null;
 
       const remainingQuantity = available - quantity;
       const closed = remainingQuantity === 0;
@@ -746,9 +746,7 @@ export const routes: Route[] = [
       await setBalance(ctx, asset.id, 0, justAfter(now));
 
       const profit = salePrice - cost;
-      const incomeTransactionId = profit > 0
-        ? await bookProfit(ctx, asset.name, to.id, profit, now)
-        : null;
+      const incomeTransactionId = profit > 0 ? await bookProfit(ctx, asset.name, to.id, profit, now) : null;
       await closeAsset(ctx, asset.id);
 
       return {
@@ -769,6 +767,9 @@ export const routes: Route[] = [
       const body = await readJson(ctx.req);
       const now = new Date();
       const asset = await accountById(ctx, ctx.params.id, 'Asset not found');
+      // Предоплата бывает только за имущество: применённая к кредиту, она двигала бы долг
+      // мимо платежа по кредиту, а к обычному счёту — деньги мимо перевода.
+      if (asset.type !== 'investment' && asset.type !== 'other_asset') throw notFound('Asset not found');
       const to = await requireDestination(ctx, str(body, 'toAccountId'));
       const amount = amountOf(body);
       if (amount === null) throw badRequest('invalid amount');
@@ -817,6 +818,9 @@ export const routes: Route[] = [
       const body = await readJson(ctx.req);
       const now = new Date();
       const asset = await accountById(ctx, ctx.params.id, 'Asset not found');
+      // Переоценка — только для имущества: у кредита «стоимость» — это долг, и переоценка
+      // позволила бы стереть его без единого платежа.
+      if (asset.type !== 'investment' && asset.type !== 'other_asset') throw notFound('Asset not found');
       if (!asset.is_active) throw conflict('Актив закрыт');
 
       const next = parseMoney(body.newValue);
@@ -920,7 +924,7 @@ export const routes: Route[] = [
           id: t.id,
           date: new Date(t.date).toISOString(),
           amount: rub(fromDb(t.amount)),
-          category: t.category_id ? names.get(t.category_id) ?? null : null,
+          category: t.category_id ? (names.get(t.category_id) ?? null) : null,
           comment: t.comment,
         })),
       };
@@ -943,9 +947,8 @@ export const routes: Route[] = [
         // становится разовым расходом. Деньги при этом не двигаются — они ушли
         // ещё при покупке, поэтому операция без счётов, только с категорией.
         const categoryId = await ensureExpenseCategory(ctx, 'Покупки');
-        const amount = asset.purchase_price != null
-          ? fromDb(asset.purchase_price)
-          : await balanceOf(ctx, asset.id);
+        const amount =
+          asset.purchase_price != null ? fromDb(asset.purchase_price) : await balanceOf(ctx, asset.id);
         purchaseExpenseId = await post(ctx, {
           type: 'expense',
           amount,

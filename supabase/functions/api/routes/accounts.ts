@@ -47,14 +47,18 @@ async function nameTaken(ctx: Ctx, name: string, exceptId?: string): Promise<boo
   const { data, error } = await ctx.db.from('accounts').select('id, name');
   if (error) throw new Error(error.message);
   const lower = name.toLowerCase();
-  return ((data ?? []) as { id: string; name: string }[])
-    .some((r) => r.id !== exceptId && r.name.toLowerCase() === lower);
+  return ((data ?? []) as { id: string; name: string }[]).some(
+    (r) => r.id !== exceptId && r.name.toLowerCase() === lower,
+  );
 }
 
 /** Условие «операция касается счёта»: он мог быть источником, получателем или привязанным активом. */
 const touchesAccount = (id: string, withAsset = false) =>
-  [`from_account_id.eq.${id}`, `to_account_id.eq.${id}`, ...(withAsset ? [`linked_asset_id.eq.${id}`] : [])]
-    .join(',');
+  [
+    `from_account_id.eq.${id}`,
+    `to_account_id.eq.${id}`,
+    ...(withAsset ? [`linked_asset_id.eq.${id}`] : []),
+  ].join(',');
 
 /** Сколько операций у счёта. Считает база: тела операций здесь не нужны. */
 async function txCount(ctx: Ctx, id: string, withAsset = false): Promise<number> {
@@ -116,7 +120,10 @@ export const routes: Route[] = [
       if (error) throw new Error(error.message);
 
       const rows = asAccounts(data);
-      const balances = await balancesOf(ctx, rows.map((r) => r.id));
+      const balances = await balancesOf(
+        ctx,
+        rows.map((r) => r.id),
+      );
       return sortAccounts(rows).map((r) => accountDTO(r, balances.get(r.id) ?? 0));
     },
   },

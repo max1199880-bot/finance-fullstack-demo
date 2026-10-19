@@ -251,10 +251,14 @@ function IconThemeCard() {
                   aria-pressed={active}
                 >
                   <CategoryIcon keyOverride="cafe" style="icons" theme={opt.id} size={40} />
-                  <span className={`text-[12px] font-semibold ${active ? 'text-ios-accent' : 'text-ios-text'}`}>
+                  <span
+                    className={`text-[12px] font-semibold ${active ? 'text-ios-accent' : 'text-ios-text'}`}
+                  >
                     {opt.label}
                   </span>
-                  <span className="text-[10px] text-ios-hint leading-tight text-center px-0.5">{opt.hint}</span>
+                  <span className="text-[10px] text-ios-hint leading-tight text-center px-0.5">
+                    {opt.hint}
+                  </span>
                 </button>
               );
             })}
@@ -335,11 +339,7 @@ function FeedbackRow() {
           </div>
         }
         right={
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="text-ios-accent text-sm font-medium"
-          >
+          <button type="button" onClick={() => setOpen(true)} className="text-ios-accent text-sm font-medium">
             Написать →
           </button>
         }
@@ -361,9 +361,7 @@ function FeedbackRow() {
               className="w-full bg-transparent outline-none resize-none text-sm placeholder:text-ios-hint"
             />
           </div>
-          <div className="text-[11px] text-ios-hint mt-1.5 px-1 text-right">
-            {text.length}/2000
-          </div>
+          <div className="text-[11px] text-ios-hint mt-1.5 px-1 text-right">{text.length}/2000</div>
           <div className="flex gap-2 mt-3">
             <button
               type="button"
@@ -420,9 +418,7 @@ function HiddenCategoriesCard() {
     onSuccess: async (res) => {
       haptic('warning');
       await invalidateAll();
-      alertDialog(
-        `Категория удалена навсегда вместе с ${res.deletedTransactions} операциями.`,
-      );
+      alertDialog(`Категория удалена навсегда вместе с ${res.deletedTransactions} операциями.`);
     },
     onError: (e) => {
       haptic('error');
@@ -434,14 +430,18 @@ function HiddenCategoriesCard() {
 
   const askRestore = (id: string, name: string) => {
     const msg = `Восстановить категорию «${name}»?`;
-    confirmDialog(msg).then((ok) => { if (ok) restore.mutate(id); });
+    confirmDialog(msg).then((ok) => {
+      if (ok) restore.mutate(id);
+    });
   };
   const askPurge = (id: string, name: string, txCount: number) => {
     const msg =
       txCount > 0
         ? `Удалить «${name}» НАВСЕГДА вместе с ${txCount} операциями? Действие необратимо.`
         : `Удалить «${name}» навсегда?`;
-    confirmDialog(msg).then((ok) => { if (ok) purge.mutate(id); });
+    confirmDialog(msg).then((ok) => {
+      if (ok) purge.mutate(id);
+    });
   };
 
   return (
@@ -457,9 +457,7 @@ function HiddenCategoriesCard() {
                 <span>{c.name}</span>
               </div>
               {c.txCount > 0 && (
-                <div className="text-[11px] text-ios-hint mt-0.5">
-                  связано {c.txCount} операций
-                </div>
+                <div className="text-[11px] text-ios-hint mt-0.5">связано {c.txCount} операций</div>
               )}
             </div>
           }

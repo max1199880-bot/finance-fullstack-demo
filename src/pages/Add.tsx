@@ -7,11 +7,7 @@ import { Header } from '../components/Header';
 import { AmountKeypad } from '../components/AmountKeypad';
 import { LossSheet } from '../components/LossSheet';
 import { CategoryTile, AddTile } from '../components/CategoryTile';
-import {
-  CategoryQuickEdit,
-  AddCategorySheet,
-  type QuickCategory,
-} from '../components/CategoryQuickEdit';
+import { CategoryQuickEdit, AddCategorySheet, type QuickCategory } from '../components/CategoryQuickEdit';
 import { fmtRub } from '../lib/format';
 import { CategoryIcon } from '../lib/iconTheme';
 import { haptic } from '../lib/telegram';
@@ -40,10 +36,18 @@ const MODE_TITLES: Record<Mode, string> = {
 const PREF_EXP_ACCOUNT_KEY = 'pref-exp-account-id';
 
 function loadPreferredExpenseAccount(): string | null {
-  try { return localStorage.getItem(PREF_EXP_ACCOUNT_KEY); } catch { return null; }
+  try {
+    return localStorage.getItem(PREF_EXP_ACCOUNT_KEY);
+  } catch {
+    return null;
+  }
 }
 function savePreferredExpenseAccount(id: string): void {
-  try { localStorage.setItem(PREF_EXP_ACCOUNT_KEY, id); } catch { /* noop */ }
+  try {
+    localStorage.setItem(PREF_EXP_ACCOUNT_KEY, id);
+  } catch {
+    /* noop */
+  }
 }
 
 /**
@@ -125,7 +129,6 @@ export function AddPage({ onDone }: { onDone: () => void }) {
       setCreditId(only.id);
       setCreditName(only.name);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCreditCat, creditId, credits.isSuccess, credits.data]);
 
   const qc = useQueryClient();
@@ -310,7 +313,14 @@ export function AddPage({ onDone }: { onDone: () => void }) {
       return { label: '✕', onClick: onDone };
     }
     if (step === 'asset_meta') {
-      return { label: '‹ Назад', onClick: () => { setStep('pick'); setPickedId(null); setPickedName(''); } };
+      return {
+        label: '‹ Назад',
+        onClick: () => {
+          setStep('pick');
+          setPickedId(null);
+          setPickedName('');
+        },
+      };
     }
     // amount step
     return {
@@ -429,7 +439,11 @@ export function AddPage({ onDone }: { onDone: () => void }) {
           {mode === 'expense' && pickedId && isCreditCat && !creditId && credits.isLoading && (
             <div className="text-ios-hint text-center py-10">Загрузка кредитов…</div>
           )}
-          {mode === 'expense' && pickedId && isCreditCat && !creditId && credits.isSuccess &&
+          {mode === 'expense' &&
+            pickedId &&
+            isCreditCat &&
+            !creditId &&
+            credits.isSuccess &&
             (credits.data.length > 0 ? (
               <CreditPicker
                 credits={credits.data}
@@ -446,50 +460,47 @@ export function AddPage({ onDone }: { onDone: () => void }) {
               />
             ) : (
               <p className="text-xs text-ios-hint text-center mb-3 leading-snug px-2">
-                Кредитов в Капитале нет — запишется как обычный расход. Заведи кредит в
-                Капитале, чтобы платежи уменьшали тело долга.
+                Кредитов в Капитале нет — запишется как обычный расход. Заведи кредит в Капитале, чтобы
+                платежи уменьшали тело долга.
               </p>
             ))}
-          {mode === 'expense' && pickedId &&
+          {mode === 'expense' &&
+            pickedId &&
             (!isCreditCat || creditId || (credits.isSuccess && credits.data.length === 0)) && (
-            <ExpenseAccountPicker
-              accounts={(accounts.data ?? []).filter(
-                (a) => a.type === 'cash' || a.type === 'bank',
-              )}
-              loading={accounts.isLoading}
-              categoryName={creditId ? `${pickedName} · ${creditName}` : pickedName}
-              preferredId={preferredExpAccountId}
-              allowNoAccount={!creditId}
-              onPick={(id, name) => {
-                if (id) {
-                  setPreferredExpAccountId(id);
-                  savePreferredExpenseAccount(id);
-                }
-                setSecondaryId(id);
-                setSecondaryName(name);
-                setStep('amount');
-                haptic('medium');
-              }}
-              onReset={() => {
-                if (creditId) {
-                  backFromCredit();
-                } else {
-                  setPickedId(null);
-                  setPickedName('');
-                  setSecondaryId(null);
-                  setSecondaryName('');
-                }
-              }}
-            />
-          )}
+              <ExpenseAccountPicker
+                accounts={(accounts.data ?? []).filter((a) => a.type === 'cash' || a.type === 'bank')}
+                loading={accounts.isLoading}
+                categoryName={creditId ? `${pickedName} · ${creditName}` : pickedName}
+                preferredId={preferredExpAccountId}
+                allowNoAccount={!creditId}
+                onPick={(id, name) => {
+                  if (id) {
+                    setPreferredExpAccountId(id);
+                    savePreferredExpenseAccount(id);
+                  }
+                  setSecondaryId(id);
+                  setSecondaryName(name);
+                  setStep('amount');
+                  haptic('medium');
+                }}
+                onReset={() => {
+                  if (creditId) {
+                    backFromCredit();
+                  } else {
+                    setPickedId(null);
+                    setPickedName('');
+                    setSecondaryId(null);
+                    setSecondaryName('');
+                  }
+                }}
+              />
+            )}
           {mode === 'income' && (
             <IncomePicker
               sourcesLoading={sources.isLoading}
               accountsLoading={accounts.isLoading}
               sources={(sources.data ?? []).map((s) => ({ id: s.id, name: s.name, emoji: s.emoji }))}
-              accounts={(accounts.data ?? []).filter(
-                (a) => a.type === 'cash' || a.type === 'bank',
-              )}
+              accounts={(accounts.data ?? []).filter((a) => a.type === 'cash' || a.type === 'bank')}
               sourceId={pickedId}
               onPickSource={(id, name) => {
                 setPickedId(id);
@@ -571,43 +582,45 @@ export function AddPage({ onDone }: { onDone: () => void }) {
         />
       )}
 
-      {step === 'amount' && mode === 'expense' && (() => {
-        // Only physical things ("техника") — brokerage/crypto `investment`
-        // accounts are not something you spend repairs on, and they only
-        // cluttered the picker (six identical «Инвестиции» rows).
-        const assetChoices = (accounts.data ?? []).filter((a) => a.type === 'other_asset');
-        if (assetChoices.length === 0) return null;
-        return (
-          <div className="px-4 pb-2">
-            <div className="text-[12px] text-ios-hint mb-1.5">
-              Для техники (необязательно) — посчитается «вложено»
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              <button
-                type="button"
-                onClick={() => setLinkedAssetId(null)}
-                className={`shrink-0 px-3 py-1.5 rounded-full text-[13px] font-medium select-none-ui ${
-                  !linkedAssetId ? 'bg-ios-accent text-white' : 'bg-ios-surface text-ios-subtext'
-                }`}
-              >
-                Нет
-              </button>
-              {assetChoices.map((a) => (
+      {step === 'amount' &&
+        mode === 'expense' &&
+        (() => {
+          // Only physical things ("техника") — brokerage/crypto `investment`
+          // accounts are not something you spend repairs on, and they only
+          // cluttered the picker (six identical «Инвестиции» rows).
+          const assetChoices = (accounts.data ?? []).filter((a) => a.type === 'other_asset');
+          if (assetChoices.length === 0) return null;
+          return (
+            <div className="px-4 pb-2">
+              <div className="text-[12px] text-ios-hint mb-1.5">
+                Для техники (необязательно) — посчитается «вложено»
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-1">
                 <button
-                  key={a.id}
                   type="button"
-                  onClick={() => setLinkedAssetId(a.id)}
-                  className={`shrink-0 px-3 py-1.5 rounded-full text-[13px] font-medium select-none-ui max-w-[60vw] truncate ${
-                    linkedAssetId === a.id ? 'bg-ios-accent text-white' : 'bg-ios-surface text-ios-subtext'
+                  onClick={() => setLinkedAssetId(null)}
+                  className={`shrink-0 px-3 py-1.5 rounded-full text-[13px] font-medium select-none-ui ${
+                    !linkedAssetId ? 'bg-ios-accent text-white' : 'bg-ios-surface text-ios-subtext'
                   }`}
                 >
-                  {a.name}
+                  Нет
                 </button>
-              ))}
+                {assetChoices.map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={() => setLinkedAssetId(a.id)}
+                    className={`shrink-0 px-3 py-1.5 rounded-full text-[13px] font-medium select-none-ui max-w-[60vw] truncate ${
+                      linkedAssetId === a.id ? 'bg-ios-accent text-white' : 'bg-ios-surface text-ios-subtext'
+                    }`}
+                  >
+                    {a.name}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
 
       {step === 'amount' && (
         <AmountKeypad
@@ -688,11 +701,7 @@ function ExpensePicker({
         Тап — выбрать · Удержание — редактировать
       </p>
 
-      <CategoryQuickEdit
-        cat={editing}
-        totalActive={items.length}
-        onClose={() => setEditing(null)}
-      />
+      <CategoryQuickEdit cat={editing} totalActive={items.length} onClose={() => setEditing(null)} />
       <AddCategorySheet open={adding} onClose={() => setAdding(false)} />
     </>
   );
@@ -960,9 +969,7 @@ function ExpenseAccountPicker({
                 type="button"
                 onClick={() => onPick(a.id, a.name)}
                 className={`w-full flex items-center justify-between rounded-ios px-4 py-3.5 active:opacity-80 transition ${
-                  isPreferred
-                    ? 'bg-ios-accentSoft text-ios-accent'
-                    : 'bg-ios-surface active:bg-ios-surface2'
+                  isPreferred ? 'bg-ios-accentSoft text-ios-accent' : 'bg-ios-surface active:bg-ios-surface2'
                 }`}
               >
                 <div className="flex flex-col items-start">
@@ -972,7 +979,9 @@ function ExpenseAccountPicker({
                     {isPreferred && ' · приоритетный'}
                   </span>
                 </div>
-                <span className={`text-sm tabular-nums ${isPreferred ? 'text-ios-accent/80' : 'text-ios-hint'}`}>
+                <span
+                  className={`text-sm tabular-nums ${isPreferred ? 'text-ios-accent/80' : 'text-ios-hint'}`}
+                >
                   {fmtRub(a.balance, { compact: true })}
                 </span>
               </button>
@@ -1088,9 +1097,7 @@ function AssetMetaForm({
       </div>
 
       <div>
-        <div className="text-xs font-semibold uppercase text-ios-hint tracking-wider px-4 mb-1.5">
-          Тип
-        </div>
+        <div className="text-xs font-semibold uppercase text-ios-hint tracking-wider px-4 mb-1.5">Тип</div>
         <div className="bg-ios-surface rounded-ios-lg p-1 grid grid-cols-2 gap-1">
           <button
             type="button"
@@ -1178,11 +1185,7 @@ function AssetMetaForm({
       )}
 
       <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex-1 bg-ios-surface rounded-ios py-3 font-medium"
-        >
+        <button type="button" onClick={onBack} className="flex-1 bg-ios-surface rounded-ios py-3 font-medium">
           Назад
         </button>
         <button

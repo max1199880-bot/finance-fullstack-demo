@@ -4,8 +4,17 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { api, createUser, ok, type Client } from '../api.setup';
 
-interface Account { id: string; name: string; type: string; balance: string }
-interface Category { id: string; name: string; isActive?: boolean }
+interface Account {
+  id: string;
+  name: string;
+  type: string;
+  balance: string;
+}
+interface Category {
+  id: string;
+  name: string;
+  isActive?: boolean;
+}
 
 let user: Client;
 let cash: Account;
@@ -30,7 +39,10 @@ describe('Справочники', () => {
     expect(all.find((c) => c.id === created.id)?.name).toBe('Хобби и спорт');
 
     await ok(user, 'POST', '/transactions', {
-      type: 'expense', categoryId: created.id, fromAccountId: cash.id, amount: '300',
+      type: 'expense',
+      categoryId: created.id,
+      fromAccountId: cash.id,
+      amount: '300',
     });
     const deleted = await ok<{ action: string }>(user, 'DELETE', `/categories/${created.id}`);
     expect(deleted.action).toBe('hidden');
@@ -63,14 +75,20 @@ describe('Операции и остатки', () => {
     await ok(user, 'PUT', '/capital/balance', { accountId: bank.id, balance: '10000' });
 
     await ok(user, 'POST', '/transactions', {
-      type: 'expense', categoryId: food.id, fromAccountId: bank.id, amount: '1500,50',
+      type: 'expense',
+      categoryId: food.id,
+      fromAccountId: bank.id,
+      amount: '1500,50',
     });
     let accounts = await ok<Account[]>(user, 'GET', '/accounts');
     expect(accounts.find((a) => a.id === bank.id)?.balance).toBe('8499.5');
 
     const sources = await ok<{ id: string }[]>(user, 'GET', '/income-sources');
     await ok(user, 'POST', '/transactions', {
-      type: 'income', incomeSourceId: sources[0].id, toAccountId: bank.id, amount: '500',
+      type: 'income',
+      incomeSourceId: sources[0].id,
+      toAccountId: bank.id,
+      amount: '500',
     });
     accounts = await ok<Account[]>(user, 'GET', '/accounts');
     expect(accounts.find((a) => a.id === bank.id)?.balance).toBe('8999.5');
@@ -79,7 +97,10 @@ describe('Операции и остатки', () => {
   it('перевод между счетами не меняет общий капитал', async () => {
     const before = await ok<{ totalNetWorth: string }>(user, 'GET', '/capital');
     await ok(user, 'POST', '/transactions', {
-      type: 'transfer_between_accounts', fromAccountId: bank.id, toAccountId: cash.id, amount: '1000',
+      type: 'transfer_between_accounts',
+      fromAccountId: bank.id,
+      toAccountId: cash.id,
+      amount: '1000',
     });
     const after = await ok<{ totalNetWorth: string }>(user, 'GET', '/capital');
     expect(after.totalNetWorth).toBe(before.totalNetWorth);
@@ -88,7 +109,11 @@ describe('Операции и остатки', () => {
   it('повтор с тем же ключом не создаёт вторую операцию', async () => {
     const key = crypto.randomUUID();
     const body = {
-      type: 'expense', categoryId: food.id, fromAccountId: cash.id, amount: '700', clientTxId: key,
+      type: 'expense',
+      categoryId: food.id,
+      fromAccountId: cash.id,
+      amount: '700',
+      clientTxId: key,
     };
     const first = await ok<{ id: string }>(user, 'POST', '/transactions', body);
     const second = await ok<{ id: string }>(user, 'POST', '/transactions', body);
@@ -103,7 +128,10 @@ describe('Операции и остатки', () => {
     const balanceBefore = before.find((a) => a.id === cash.id)!.balance;
 
     const created = await ok<{ id: string }>(user, 'POST', '/transactions', {
-      type: 'expense', categoryId: food.id, fromAccountId: cash.id, amount: '250',
+      type: 'expense',
+      categoryId: food.id,
+      fromAccountId: cash.id,
+      amount: '250',
     });
     await ok(user, 'DELETE', `/transactions/${created.id}`);
 
@@ -114,7 +142,10 @@ describe('Операции и остатки', () => {
   it('сумма с нулём или буквами отклоняется', async () => {
     for (const amount of ['0', 'сто рублей', '-5']) {
       const res = await api(user, 'POST', '/transactions', {
-        type: 'expense', categoryId: food.id, fromAccountId: cash.id, amount,
+        type: 'expense',
+        categoryId: food.id,
+        fromAccountId: cash.id,
+        amount,
       });
       expect(res.status).toBe(400);
       expect((res.body as { error: string }).error).toBe('Invalid amount');
@@ -123,7 +154,10 @@ describe('Операции и остатки', () => {
 
   it('операцию нельзя записать в несуществующую категорию', async () => {
     const res = await api(user, 'POST', '/transactions', {
-      type: 'expense', categoryId: crypto.randomUUID(), fromAccountId: cash.id, amount: '100',
+      type: 'expense',
+      categoryId: crypto.randomUUID(),
+      fromAccountId: cash.id,
+      amount: '100',
     });
     expect(res.status).toBe(404);
     expect((res.body as { error: string }).error).toBe('Category not found');
@@ -134,7 +168,13 @@ describe('Бюджет', () => {
   it('план и факт дают процент и статус', async () => {
     await ok(user, 'PUT', '/budget/category', { categoryId: food.id, amount: '1000' });
     const budget = await ok<{
-      categories: { categoryId: string; planned: string; actual: string; percent: number | null; status: string }[];
+      categories: {
+        categoryId: string;
+        planned: string;
+        actual: string;
+        percent: number | null;
+        status: string;
+      }[];
       total: { planned: string };
     }>(user, 'GET', '/budget');
 
@@ -156,7 +196,9 @@ describe('Бюджет', () => {
 
   it('план переносится на следующие месяцы', async () => {
     const res = await ok<{ written: number; skipped: number; months: number }>(
-      user, 'PUT', '/budget/category/propagate',
+      user,
+      'PUT',
+      '/budget/category/propagate',
       { categoryId: food.id, amount: '2000', propagateMonths: 2 },
     );
     expect(res.months).toBe(3);
@@ -173,7 +215,10 @@ describe('Бюджет', () => {
 describe('Капитал', () => {
   it('итог равен сумме счетов за вычетом долгов', async () => {
     const capital = await ok<{
-      accounts: Account[]; totalCash: string; totalCredits: string; totalNetWorth: string;
+      accounts: Account[];
+      totalCash: string;
+      totalCredits: string;
+      totalNetWorth: string;
     }>(user, 'GET', '/capital');
 
     const cashSum = capital.accounts
@@ -181,13 +226,16 @@ describe('Капитал', () => {
       .reduce((acc, a) => acc + Number(a.balance), 0);
     expect(Number(capital.totalCash)).toBeCloseTo(cashSum, 2);
     expect(Number(capital.totalNetWorth)).toBeCloseTo(
-      Number(capital.totalCash) + Number(capital.totalCredits) * -1, 2,
+      Number(capital.totalCash) + Number(capital.totalCredits) * -1,
+      2,
     );
   });
 
   it('новый счёт создаётся с начальным остатком', async () => {
     const created = await ok<{ id: string }>(user, 'POST', '/accounts', {
-      name: 'Копилка', type: 'bank', initialBalance: '25000',
+      name: 'Копилка',
+      type: 'bank',
+      initialBalance: '25000',
     });
     const accounts = await ok<Account[]>(user, 'GET', '/accounts');
     expect(accounts.find((a) => a.id === created.id)?.balance).toBe('25000');

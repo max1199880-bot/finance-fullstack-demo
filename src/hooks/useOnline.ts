@@ -5,9 +5,7 @@ import { useEffect, useState } from 'react';
  * Hangs around in App for the offline banner.
  */
 export function useOnline(): boolean {
-  const [online, setOnline] = useState(
-    typeof navigator !== 'undefined' ? navigator.onLine : true,
-  );
+  const [online, setOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   useEffect(() => {
     const onOnline = () => setOnline(true);
     const onOffline = () => setOnline(false);

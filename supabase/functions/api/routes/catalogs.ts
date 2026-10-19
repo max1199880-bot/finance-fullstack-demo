@@ -93,7 +93,7 @@ async function activeExpenseCount(ctx: Ctx): Promise<number> {
 /** Нижняя граница 6: проверяем перед любым исчезновением категории с экрана. */
 async function guardMinActiveExpense(ctx: Ctx, cat: CategoryRow): Promise<void> {
   if (!cat.is_active || cat.type !== 'expense') return;
-  if (await activeExpenseCount(ctx) <= MIN_ACTIVE_EXPENSE) {
+  if ((await activeExpenseCount(ctx)) <= MIN_ACTIVE_EXPENSE) {
     throw badRequest(`Должно остаться минимум ${MIN_ACTIVE_EXPENSE} активных категорий расходов`);
   }
 }
@@ -223,10 +223,10 @@ export const routes: Route[] = [
       const { data, error } = await ctx.db.from('categories').select(CATEGORY_FIELDS);
       if (error) throw new Error(error.message);
       return rowsOf<CategoryRow>(data)
-        .sort((a, b) =>
-          (a.type === b.type ? 0 : a.type === 'expense' ? -1 : 1) ||
-          a.order - b.order ||
-          byNameRu(a, b))
+        .sort(
+          (a, b) =>
+            (a.type === b.type ? 0 : a.type === 'expense' ? -1 : 1) || a.order - b.order || byNameRu(a, b),
+        )
         .map((r) => ({ ...categoryDTO(r), order: r.order }));
     },
   },
@@ -242,7 +242,11 @@ export const routes: Route[] = [
         .order('created_at');
       if (error) throw new Error(error.message);
       const rows = rowsOf<CategoryRow>(data);
-      const counts = await linkedTxCounts(ctx, 'category_id', rows.map((r) => r.id));
+      const counts = await linkedTxCounts(
+        ctx,
+        'category_id',
+        rows.map((r) => r.id),
+      );
       return rows.map((r) => ({
         id: r.id,
         name: r.name,
@@ -266,11 +270,13 @@ export const routes: Route[] = [
       // поэтому текст у неё свой.
       const twin = await twinByName<CategoryRow>(ctx, 'categories', CATEGORY_FIELDS, name, type);
       if (twin) {
-        throw conflict(twin.is_active
-          ? 'Категория с таким именем уже существует'
-          : 'Категория с таким именем была скрыта. Восстановить или удалить навсегда?');
+        throw conflict(
+          twin.is_active
+            ? 'Категория с таким именем уже существует'
+            : 'Категория с таким именем была скрыта. Восстановить или удалить навсегда?',
+        );
       }
-      if (type === 'expense' && await activeExpenseCount(ctx) >= MAX_ACTIVE_EXPENSE) {
+      if (type === 'expense' && (await activeExpenseCount(ctx)) >= MAX_ACTIVE_EXPENSE) {
         throw badRequest(`Максимум ${MAX_ACTIVE_EXPENSE} активных категорий расходов`);
       }
 
@@ -362,7 +368,7 @@ export const routes: Route[] = [
     handler: async (ctx) => {
       const cat = await requireCategory(ctx, ctx.params.id);
       await guardMinActiveExpense(ctx, cat);
-      if (await linkedTxCount(ctx, 'category_id', cat.id) > 0) {
+      if ((await linkedTxCount(ctx, 'category_id', cat.id)) > 0) {
         await hide(ctx, 'categories', cat.id);
         return { ok: true, action: 'hidden', reason: 'has_transactions' };
       }
@@ -377,10 +383,7 @@ export const routes: Route[] = [
     method: 'GET',
     path: '/income-sources',
     handler: async (ctx) => {
-      const { data, error } = await ctx.db
-        .from('income_sources')
-        .select(SOURCE_FIELDS)
-        .eq('is_active', true);
+      const { data, error } = await ctx.db.from('income_sources').select(SOURCE_FIELDS).eq('is_active', true);
       if (error) throw new Error(error.message);
       return rowsOf<SourceRow>(data)
         .sort(byNameRu)
@@ -399,7 +402,11 @@ export const routes: Route[] = [
         .order('created_at');
       if (error) throw new Error(error.message);
       const rows = rowsOf<SourceRow>(data);
-      const counts = await linkedTxCounts(ctx, 'income_source_id', rows.map((r) => r.id));
+      const counts = await linkedTxCounts(
+        ctx,
+        'income_source_id',
+        rows.map((r) => r.id),
+      );
       return rows.map((r) => ({
         id: r.id,
         name: r.name,
@@ -419,9 +426,11 @@ export const routes: Route[] = [
 
       const twin = await twinByName<SourceRow>(ctx, 'income_sources', SOURCE_FIELDS, name);
       if (twin) {
-        throw conflict(twin.is_active
-          ? 'Источник с таким именем уже существует'
-          : 'Источник с таким именем был скрыт. Восстановить или удалить навсегда?');
+        throw conflict(
+          twin.is_active
+            ? 'Источник с таким именем уже существует'
+            : 'Источник с таким именем был скрыт. Восстановить или удалить навсегда?',
+        );
       }
 
       const { data, error } = await ctx.db
@@ -474,7 +483,7 @@ export const routes: Route[] = [
     path: '/income-sources/:id',
     handler: async (ctx) => {
       const src = await requireSource(ctx, ctx.params.id);
-      if (await linkedTxCount(ctx, 'income_source_id', src.id) > 0) {
+      if ((await linkedTxCount(ctx, 'income_source_id', src.id)) > 0) {
         await hide(ctx, 'income_sources', src.id);
         return { ok: true, action: 'hidden', reason: 'has_transactions' };
       }

@@ -8,8 +8,12 @@ import { fromDb, type Kopecks, rub } from './money.ts';
 
 export type AccountType = 'cash' | 'bank' | 'investment' | 'other_asset' | 'credit' | 'credit_buffer';
 export type TxType =
-  | 'income' | 'expense' | 'transfer_to_investment'
-  | 'transfer_between_accounts' | 'credit_payment' | 'asset_revaluation';
+  | 'income'
+  | 'expense'
+  | 'transfer_to_investment'
+  | 'transfer_between_accounts'
+  | 'credit_payment'
+  | 'asset_revaluation';
 
 export interface AccountRow {
   id: string;
@@ -51,7 +55,12 @@ export const TX_FIELDS =
 
 /** Порядок счетов на экране: сначала деньги, потом имущество, в конце долги. */
 const TYPE_ORDER: Record<AccountType, number> = {
-  cash: 0, bank: 1, investment: 2, other_asset: 3, credit: 4, credit_buffer: 5,
+  cash: 0,
+  bank: 1,
+  investment: 2,
+  other_asset: 3,
+  credit: 4,
+  credit_buffer: 5,
 };
 
 /**
@@ -63,8 +72,7 @@ export const rowsOf = <T>(data: unknown): T[] => (data ?? []) as unknown as T[];
 export const rowOf = <T>(data: unknown): T => data as unknown as T;
 
 export function sortAccounts<T extends { type: AccountType; name: string }>(rows: T[]): T[] {
-  return rows.sort((a, b) =>
-    TYPE_ORDER[a.type] - TYPE_ORDER[b.type] || a.name.localeCompare(b.name, 'ru'));
+  return rows.sort((a, b) => TYPE_ORDER[a.type] - TYPE_ORDER[b.type] || a.name.localeCompare(b.name, 'ru'));
 }
 
 export const byNameRu = <T extends { name: string }>(a: T, b: T) => a.name.localeCompare(b.name, 'ru');
@@ -79,9 +87,12 @@ export async function balancesOf(ctx: Ctx, accountIds: string[]): Promise<Map<st
   if (!accountIds.length) return out;
   const { data, error } = await ctx.db
     .from('account_balances')
-    .select('account_id, date, balance')
+    .select('account_id, balance')
     .in('account_id', accountIds)
-    .order('date', { ascending: false });
+    // Текущий остаток — последняя записанная строка (seq), а не последняя по дате:
+    // дата — момент начала запроса, и при параллельных запросах порядок дат не совпадает
+    // с порядком записи (см. миграцию security_hardening, B-3).
+    .order('seq', { ascending: false });
   if (error) throw new Error(error.message);
   for (const row of rowsOf<{ account_id: string; balance: string }>(data)) {
     if (!out.has(row.account_id)) out.set(row.account_id, fromDb(row.balance));
@@ -144,12 +155,12 @@ export function txDTO(row: TxRow, names: NameMaps) {
     amount: rub(fromDb(row.amount)),
     type: row.type,
     categoryId: row.category_id,
-    categoryName: row.category_id ? names.categories.get(row.category_id) ?? null : null,
-    incomeSourceName: row.income_source_id ? names.sources.get(row.income_source_id) ?? null : null,
+    categoryName: row.category_id ? (names.categories.get(row.category_id) ?? null) : null,
+    incomeSourceName: row.income_source_id ? (names.sources.get(row.income_source_id) ?? null) : null,
     fromAccountId: row.from_account_id,
     toAccountId: row.to_account_id,
-    fromAccountName: row.from_account_id ? names.accounts.get(row.from_account_id) ?? null : null,
-    toAccountName: row.to_account_id ? names.accounts.get(row.to_account_id) ?? null : null,
+    fromAccountName: row.from_account_id ? (names.accounts.get(row.from_account_id) ?? null) : null,
+    toAccountName: row.to_account_id ? (names.accounts.get(row.to_account_id) ?? null) : null,
     comment: row.comment,
   };
 }
@@ -159,12 +170,13 @@ export function txDTO(row: TxRow, names: NameMaps) {
  * до 90% — норма, до 110% — предупреждение, выше — перерасход.
  */
 export function planFact(planned: Kopecks | null, actual: Kopecks) {
-  const status = planned === null || planned === 0
-    ? 'no_plan'
-    : (() => {
-      const p = Math.round((actual / planned) * 100);
-      return p <= 90 ? 'ok' : p <= 110 ? 'warning' : 'over';
-    })();
+  const status =
+    planned === null || planned === 0
+      ? 'no_plan'
+      : (() => {
+          const p = Math.round((actual / planned) * 100);
+          return p <= 90 ? 'ok' : p <= 110 ? 'warning' : 'over';
+        })();
   return {
     planned: rub(planned ?? 0),
     actual: rub(actual),
@@ -175,14 +187,26 @@ export function planFact(planned: Kopecks | null, actual: Kopecks) {
 }
 
 /** Счёт пользователя по id. RLS уже отсекает чужие строки — пустой ответ значит «нет такого». */
-export async function requireAccount(ctx: Ctx, id: string, message = 'Account not found'): Promise<AccountRow> {
+export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function requireAccount(
+  ctx: Ctx,
+  id: string,
+  message = 'Account not found',
+): Promise<AccountRow> {
+  // Не-UUID в столбец uuid база отвергает ошибкой типа — это был бы 500 вместо 404.
+  if (typeof id !== 'string' || !UUID_RE.test(id)) throw notFound(message);
   const { data, error } = await ctx.db.from('accounts').select(ACCOUNT_FIELDS).eq('id', id).maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw notFound(message);
   return rowOf<AccountRow>(data);
 }
 
-export async function requireCashOrBank(ctx: Ctx, id: string, notFoundMsg = 'Account not found'): Promise<AccountRow> {
+export async function requireCashOrBank(
+  ctx: Ctx,
+  id: string,
+  notFoundMsg = 'Account not found',
+): Promise<AccountRow> {
   const acc = await requireAccount(ctx, id, notFoundMsg);
   if (acc.type !== 'cash' && acc.type !== 'bank') throw badRequest('Account must be cash or bank');
   return acc;
@@ -193,6 +217,8 @@ export function sumAmounts(rows: { amount: string }[]): Kopecks {
   return rows.reduce((acc, r) => acc + fromDb(r.amount), 0);
 }
 
+const MAX_RANGE_MS = 400 * 24 * 3600 * 1000;
+
 /** Диапазон дат из query: [from, to). Мусор — 400, как в приложении. */
 export function dateRange(url: URL): { from: Date; to: Date } {
   const toRaw = url.searchParams.get('to');
@@ -200,6 +226,10 @@ export function dateRange(url: URL): { from: Date; to: Date } {
   const to = toRaw ? new Date(toRaw) : new Date();
   const from = fromRaw ? new Date(fromRaw) : new Date(to.getTime() - 30 * 24 * 3600 * 1000);
   if (Number.isNaN(to.getTime()) || Number.isNaN(from.getTime())) throw badRequest('Invalid date');
+  // Без предела запрос «с 1000 по 9999 год» строил миллионы точек графика и валил
+  // воркер функции по памяти. Самый длинный период на экране аналитики — год.
+  if (from > to) throw badRequest('Начало периода позже конца');
+  if (to.getTime() - from.getTime() > MAX_RANGE_MS) throw badRequest('Период не больше 400 дней');
   return { from, to };
 }
 

@@ -44,31 +44,10 @@ export default defineConfig({
         // Запросы к API идут на домен Supabase, а не на свой — подменять их
         // закешированной страницей нельзя.
         navigateFallbackDenylist: [/^\/api\//, /\/functions\/v1\//],
-        runtimeCaching: [
-          {
-            // Чтение данных: сначала сеть, при недоступности — последний ответ из кеша.
-            // Адрес сменился на домен Supabase, поэтому правило смотрит на путь функции.
-            urlPattern: ({ url }) =>
-              url.pathname.includes('/functions/v1/api/') &&
-              !url.pathname.includes('/api/auth') &&
-              !url.pathname.includes('/api/push'),
-            handler: 'NetworkFirst',
-            method: 'GET',
-            options: {
-              cacheName: 'api-cache',
-              networkTimeoutSeconds: 5,
-              expiration: { maxAgeSeconds: 60 * 60 * 24 * 7, maxEntries: 200 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          {
-            // Вход и подписки на уведомления всегда идут в сеть: закешированный
-            // ответ о сессии — прямой путь к «вошёл под чужим аккаунтом».
-            urlPattern: ({ url }) =>
-              url.pathname.includes('/auth/v1/') || url.pathname.includes('/api/auth'),
-            handler: 'NetworkOnly',
-          },
-        ],
+        // Ответы API сервис-воркер НЕ кеширует. Ключом такого кеша был бы только адрес,
+        // без пользователя: после выхода данные оставались бы в Cache Storage, а при
+        // медленной сети их получил бы следующий вошедший. Офлайн-режим даёт кеш
+        // TanStack Query, и он стирается при выходе (lib/session.ts).
       },
       devOptions: {
         // Keep the SW off during `vite dev` to avoid caching surprises while
@@ -79,7 +58,8 @@ export default defineConfig({
   ],
   server: {
     port: 5173,
-    host: true,
+    // Без host: true — дев-сервер слушает только этот компьютер. Открытый в локальную
+    // сеть сервер отдавал бы исходники всем в той же Wi-Fi.
     // Прокси не нужен: фронтенд обращается к Supabase по полному адресу из
     // VITE_SUPABASE_URL, а доступ с этого адреса разрешён настройкой CORS бэкенда.
   },
@@ -87,6 +67,21 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: false,
     target: 'es2020',
+    rollupOptions: {
+      output: {
+        // Библиотеки — отдельными файлами: они меняются редко, и после очередного
+        // деплоя браузер берёт их из кеша, скачивая заново только код приложения.
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          query: [
+            '@tanstack/react-query',
+            '@tanstack/react-query-persist-client',
+            '@tanstack/query-sync-storage-persister',
+          ],
+          auth: ['@supabase/auth-js'],
+        },
+      },
+    },
   },
   // Демо: автотесты (Vitest + Testing Library) в том же конфиге, что и сборка.
   test: {

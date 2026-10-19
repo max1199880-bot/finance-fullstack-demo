@@ -27,7 +27,6 @@ function rangeFor(preset: Preset): { from: Date; to: Date; label: string } {
     return x;
   };
   const monthStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
-  const monthEnd = (d: Date) => new Date(d.getFullYear(), d.getMonth() + 1, 1);
 
   switch (preset) {
     case '7d':
@@ -129,7 +128,10 @@ export function AnalyticsPage() {
           than the screen, so on phones the whole page could be dragged sideways by
           4px. px-3 keeps the chips at the same 16px inset and the same width. */}
       <div className="px-3">
-        <div className="flex gap-1.5 overflow-x-auto pb-1 px-1 scroll-smooth select-none-ui" style={{ scrollbarWidth: 'none' }}>
+        <div
+          className="flex gap-1.5 overflow-x-auto pb-1 px-1 scroll-smooth select-none-ui"
+          style={{ scrollbarWidth: 'none' }}
+        >
           {PRESETS.map((p) => (
             <button
               key={p.id}
@@ -155,10 +157,7 @@ export function AnalyticsPage() {
         {summary.isLoading || !summary.data ? (
           <div className="h-32 bg-ios-surface rounded-ios-lg animate-pulse" />
         ) : (
-          <SummaryCard
-            current={summary.data.current}
-            previous={summary.data.previous}
-          />
+          <SummaryCard current={summary.data.current} previous={summary.data.previous} />
         )}
       </div>
 
@@ -199,9 +198,7 @@ export function AnalyticsPage() {
               </div>
             ))}
           </div>
-          <div className="px-4 pb-3 text-xs text-ios-hint">
-            Всего: {fmtRub(incomeBySource.data.total)}
-          </div>
+          <div className="px-4 pb-3 text-xs text-ios-hint">Всего: {fmtRub(incomeBySource.data.total)}</div>
         </Card>
       )}
 
@@ -283,7 +280,13 @@ function SummaryCard({
   const blocks = [
     { label: 'Расход', cur: current.expense, prev: previous.expense, color: 'text-ios-red', up: 'bad' },
     { label: 'Доход', cur: current.income, prev: previous.income, color: 'text-ios-green', up: 'good' },
-    { label: 'Инвест.', cur: current.investment, prev: previous.investment, color: 'text-ios-accent', up: 'good' },
+    {
+      label: 'Инвест.',
+      cur: current.investment,
+      prev: previous.investment,
+      color: 'text-ios-accent',
+      up: 'good',
+    },
   ] as const;
 
   return (
@@ -314,9 +317,7 @@ function SummaryCard({
                   {isPositive ? '↑' : '↓'} {Math.abs(pct)}%
                 </div>
               )}
-              {noChange && (
-                <div className="mt-1 inline-flex text-[10px] text-ios-hint">— vs прошлый</div>
-              )}
+              {noChange && <div className="mt-1 inline-flex text-[10px] text-ios-hint">— vs прошлый</div>}
             </div>
           );
         })}
@@ -376,12 +377,34 @@ function NetWorthCard({
 
   // Composition rows (skip zero lines so the card stays tight).
   const rows = capital
-    ? ([
-        { label: '💵 Деньги', hint: 'наличные и на картах', value: parseFloat(capital.totalCash), neg: false },
-        { label: '📈 Инвестиции', hint: 'брокер, крипта', value: parseFloat(capital.totalInvestments), neg: false },
-        { label: '🚗 Активы', hint: 'мото, техника и пр.', value: parseFloat(capital.totalOther), neg: false },
-        { label: '💳 Долги', hint: 'остаток по кредитам', value: parseFloat(capital.totalCredits), neg: true },
-      ] as const).filter((r) => Math.abs(r.value) > 0.005)
+    ? (
+        [
+          {
+            label: '💵 Деньги',
+            hint: 'наличные и на картах',
+            value: parseFloat(capital.totalCash),
+            neg: false,
+          },
+          {
+            label: '📈 Инвестиции',
+            hint: 'брокер, крипта',
+            value: parseFloat(capital.totalInvestments),
+            neg: false,
+          },
+          {
+            label: '🚗 Активы',
+            hint: 'мото, техника и пр.',
+            value: parseFloat(capital.totalOther),
+            neg: false,
+          },
+          {
+            label: '💳 Долги',
+            hint: 'остаток по кредитам',
+            value: parseFloat(capital.totalCredits),
+            neg: true,
+          },
+        ] as const
+      ).filter((r) => Math.abs(r.value) > 0.005)
     : [];
 
   return (
@@ -391,9 +414,7 @@ function NetWorthCard({
         <div className="flex justify-between items-start mb-1">
           <div>
             <div className="text-sm text-ios-hint">Сейчас</div>
-            <div className="font-rounded font-bold text-2xl tabular-nums mt-0.5">
-              {fmtRub(nowVal)}
-            </div>
+            <div className="font-rounded font-bold text-2xl tabular-nums mt-0.5">{fmtRub(nowVal)}</div>
           </div>
           {weeks.length > 1 && (
             <div className="text-right">
@@ -403,7 +424,12 @@ function NetWorthCard({
                 }`}
               >
                 {up ? '↑' : '↓'} {fmtRub(Math.abs(delta), { compact: true })}
-                {pct !== null && <span className="opacity-80">({up ? '+' : '−'}{Math.abs(pct)}%)</span>}
+                {pct !== null && (
+                  <span className="opacity-80">
+                    ({up ? '+' : '−'}
+                    {Math.abs(pct)}%)
+                  </span>
+                )}
               </div>
               <div className="text-[11px] text-ios-hint mt-1">за 6 месяцев</div>
             </div>
@@ -420,7 +446,8 @@ function NetWorthCard({
             xEndLabel="сейчас"
           />
           <div className="text-[11px] text-ios-hint mt-1 text-center leading-snug">
-            Пунктир — уровень {shortDate(weeks[0]?.weekEnd ?? new Date().toISOString())}. Точка на линии = капитал на конец недели.
+            Пунктир — уровень {shortDate(weeks[0]?.weekEnd ?? new Date().toISOString())}. Точка на линии =
+            капитал на конец недели.
           </div>
         </div>
 
@@ -507,8 +534,18 @@ function SoldAssetsCard({
   // sale (fallback to the purchase month for never-sold rows). Items arrive
   // sorted by saleDate desc, so consecutive rows share a month.
   const MONTHS = [
-    'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
+    'Январь',
+    'Февраль',
+    'Март',
+    'Апрель',
+    'Май',
+    'Июнь',
+    'Июль',
+    'Август',
+    'Сентябрь',
+    'Октябрь',
+    'Ноябрь',
+    'Декабрь',
   ];
   const monthLabel = (it: { saleDate: string | null; purchaseDate: string }) => {
     const d = new Date(it.saleDate ?? it.purchaseDate);
@@ -520,11 +557,13 @@ function SoldAssetsCard({
       <div className="px-4 pb-3">
         {/* Filter toggle */}
         <div className="flex flex-wrap gap-1.5 mb-3">
-          {([
-            { id: 'all', label: 'Все' },
-            { id: 'completed', label: 'Выкупленные' },
-            { id: 'loss', label: 'Займ и убытки' },
-          ] as const).map((opt) => (
+          {(
+            [
+              { id: 'all', label: 'Все' },
+              { id: 'completed', label: 'Выкупленные' },
+              { id: 'loss', label: 'Займ и убытки' },
+            ] as const
+          ).map((opt) => (
             <button
               key={opt.id}
               type="button"
@@ -561,11 +600,7 @@ function SoldAssetsCard({
             <div className="text-[11px] text-ios-hint">P&amp;L</div>
             <div
               className={`font-rounded font-semibold tabular-nums text-[14px] ${
-                totals.pnl > 0
-                  ? 'text-ios-green'
-                  : totals.pnl < 0
-                    ? 'text-ios-red'
-                    : 'text-ios-subtext'
+                totals.pnl > 0 ? 'text-ios-green' : totals.pnl < 0 ? 'text-ios-red' : 'text-ios-subtext'
               }`}
             >
               {totals.pnl > 0 ? '+' : ''}
@@ -630,9 +665,10 @@ function SoldAssetsCard({
                       )}
                     </div>
                     <div className="text-[11px] text-ios-hint mt-0.5 tabular-nums">
-                      {it.partial ? 'вложено ' : ''}{fmtRub(it.purchasePrice)}{' '}
-                      <span className="text-ios-subtext">→</span>{' '}
-                      {it.partial ? 'получено ' : ''}{fmtRub(it.salePrice)}
+                      {it.partial ? 'вложено ' : ''}
+                      {fmtRub(it.purchasePrice)} <span className="text-ios-subtext">→</span>{' '}
+                      {it.partial ? 'получено ' : ''}
+                      {fmtRub(it.salePrice)}
                     </div>
                     {it.partial && (
                       <div className="text-[11px] text-amber-500 mt-0.5 tabular-nums">

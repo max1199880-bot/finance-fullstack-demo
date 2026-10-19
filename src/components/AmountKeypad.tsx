@@ -18,12 +18,7 @@ interface Props {
   onCommentChange?: (v: string) => void;
 }
 
-const KEYS: (string | 'back' | 'sep')[] = [
-  '1', '2', '3',
-  '4', '5', '6',
-  '7', '8', '9',
-  'sep', '0', 'back',
-];
+const KEYS: (string | 'back' | 'sep')[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'sep', '0', 'back'];
 
 export function AmountKeypad({
   initial = '',
@@ -111,7 +106,14 @@ export function AmountKeypad({
                   aria-label="Снять отметку"
                 >
                   <svg viewBox="0 0 12 12" className="w-3.5 h-3.5">
-                    <path d="M2 6 L5 9 L10 3" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                    <path
+                      d="M2 6 L5 9 L10 3"
+                      stroke="white"
+                      strokeWidth="2"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                 </button>
                 <span className="text-xs text-ios-hint flex-1">Комментарий к операции</span>

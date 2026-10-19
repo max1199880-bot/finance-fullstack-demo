@@ -24,7 +24,6 @@ vi.mock('../lib/supabase', () => {
   };
 });
 
-
 // Node 25 объявляет собственный экспериментальный глобальный localStorage; без флага
 // --localstorage-file это заглушка без методов, и в jsdom она перекрывает нормальное
 // хранилище («localStorage.clear is not a function»). Экраны прода пользуются localStorage

@@ -110,8 +110,8 @@ export function LossSheet({
       {step === 'pick' && (
         <div className="px-4 pb-4 pt-2 space-y-4">
           <div className="text-sm text-ios-hint leading-snug">
-            Деньги спишутся со счёта как убыток (расход). Если возвращаешь прибыль
-            с продажи — выбери её ниже, сумма подставится.
+            Деньги спишутся со счёта как убыток (расход). Если возвращаешь прибыль с продажи — выбери её ниже,
+            сумма подставится.
           </div>
 
           {saleProfits.length > 0 && (

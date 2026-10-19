@@ -33,7 +33,7 @@ interface Pageable<T> {
 
 async function selectAll<T>(make: () => Pageable<T>, page = 1000): Promise<T[]> {
   const out: T[] = [];
-  for (let offset = 0;; offset += page) {
+  for (let offset = 0; ; offset += page) {
     const { data, error } = await make().range(offset, offset + page - 1);
     if (error) throw new Error(error.message);
     const rows = data ?? [];
@@ -73,7 +73,7 @@ function balanceRows(ctx: Ctx, accountIds: string[]): Promise<BalanceRow[]> {
       .select('account_id, date, balance')
       .in('account_id', accountIds)
       .order('date', { ascending: true })
-      .order('id', { ascending: true })
+      .order('id', { ascending: true }),
   );
 }
 
@@ -85,7 +85,7 @@ function periodTx(ctx: Ctx, from: Date, to: Date): Promise<PeriodTxRow[]> {
       .select(PERIOD_TX_FIELDS)
       .gte('date', from.toISOString())
       .lt('date', to.toISOString())
-      .order('id', { ascending: true })
+      .order('id', { ascending: true }),
   );
 }
 
@@ -139,7 +139,7 @@ function shareItems(
 /** Справочник id → имя одним запросом: без него пришлось бы спрашивать имя на каждую группу. */
 async function nameMap(ctx: Ctx, table: 'categories' | 'income_sources'): Promise<Map<string, string>> {
   const rows = await selectAll<{ id: string; name: string }>(() =>
-    ctx.db.from(table).select('id, name').order('id', { ascending: true })
+    ctx.db.from(table).select('id, name').order('id', { ascending: true }),
   );
   return new Map(rows.map((r) => [r.id, r.name]));
 }
@@ -159,9 +159,14 @@ const pad = (n: number) => String(n).padStart(2, '0');
 /** Календарный день в зоне сервера: ряд строится по локальным датам, как на экране. */
 const localDay = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
-const ACCOUNT_TYPES = new Set<string>(
-  ['cash', 'bank', 'investment', 'other_asset', 'credit', 'credit_buffer'] satisfies AccountType[],
-);
+const ACCOUNT_TYPES = new Set<string>([
+  'cash',
+  'bank',
+  'investment',
+  'other_asset',
+  'credit',
+  'credit_buffer',
+] satisfies AccountType[]);
 
 /** Переводы: продажа актива уходит деньгами со счёта-актива на счёт получателя. */
 const TRANSFER_TYPES: TxType[] = ['transfer_between_accounts', 'transfer_to_investment'];
@@ -205,7 +210,7 @@ export const routes: Route[] = [
             .eq('type', 'expense')
             .gte('date', from.toISOString())
             .lt('date', to.toISOString())
-            .order('id', { ascending: true })
+            .order('id', { ascending: true }),
         ),
         nameMap(ctx, 'categories'),
       ]);
@@ -242,7 +247,7 @@ export const routes: Route[] = [
             .eq('type', 'income')
             .gte('date', from.toISOString())
             .lt('date', to.toISOString())
-            .order('id', { ascending: true })
+            .order('id', { ascending: true }),
         ),
         nameMap(ctx, 'income_sources'),
       ]);
@@ -328,7 +333,10 @@ export const routes: Route[] = [
       // weeks × accounts запросов (до 156 × N). Вместо этого берём всю историю
       // остатков один раз и идём по ней одним проходом — ряд уже отсортирован
       // по дате, а точки графика тоже растут, поэтому возврат назад не нужен.
-      const rows = await balanceRows(ctx, accounts.map((a) => a.id));
+      const rows = await balanceRows(
+        ctx,
+        accounts.map((a) => a.id),
+      );
       const creditIds = new Set(accounts.filter((a) => a.type === 'credit').map((a) => a.id));
       const balance = new Map<string, Kopecks>();
       let total = 0;
@@ -367,7 +375,7 @@ export const routes: Route[] = [
           .select(`${ACCOUNT_FIELDS}, created_at`)
           .in('type', ['investment', 'other_asset'])
           .eq('is_active', false)
-          .order('id', { ascending: true })
+          .order('id', { ascending: true }),
       );
       if (!accounts.length) return { items: [] };
 
@@ -381,7 +389,7 @@ export const routes: Route[] = [
             .select('date, amount, from_account_id')
             .in('from_account_id', ids)
             .in('type', TRANSFER_TYPES)
-            .order('id', { ascending: true })
+            .order('id', { ascending: true }),
         ),
       ]);
 

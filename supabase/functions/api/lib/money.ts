@@ -5,20 +5,33 @@
 
 export type Kopecks = number;
 
-/** Строка/число из тела запроса → копейки. null, если это не число (обработчик ответит 400). */
-export function parseMoney(v: unknown): Kopecks | null {
-  if (typeof v === 'number') return Number.isFinite(v) ? parseMoney(String(v)) : null;
+/** Разбор числа в копейки без ограничений — для значений, пришедших из своей базы. */
+function parse(v: unknown): Kopecks | null {
+  if (typeof v === 'number') return Number.isFinite(v) ? parse(String(v)) : null;
   if (typeof v !== 'string') return null;
-  const s = v.replace(/[\s  ]/g, '').replace(',', '.');
+  const s = v.replace(/[\s\u00a0\u202f]/g, '').replace(',', '.');
   if (!/^-?\d+(\.\d+)?$/.test(s)) return null;
   const [int = '0', frac = ''] = s.replace('-', '').split('.');
   const k = Number(int) * 100 + Number((frac + '00').slice(0, 2));
   return s.startsWith('-') ? -k : k;
 }
 
+/**
+ * Предел одной суммы из запроса — миллиард рублей. Это не предел столбца (у numeric(14,2)
+ * он в тысячу раз больше), а запас: остаток копит суммы, и без запаса пара огромных
+ * доходов упирала бы счёт в предел столбца, после чего любые доходы на него падали с 500.
+ */
+export const MAX_KOPECKS = 1_000_000_000_00;
+
+/** Строка/число из тела запроса → копейки. null — не число или больше предела (обработчик ответит 400). */
+export function parseMoney(v: unknown): Kopecks | null {
+  const k = parse(v);
+  return k === null || Math.abs(k) > MAX_KOPECKS ? null : k;
+}
+
 /** numeric из Postgres (приходит строкой "1250.50") → копейки. */
 export function fromDb(v: unknown): Kopecks {
-  return parseMoney(v ?? 0) ?? 0;
+  return parse(v ?? 0) ?? 0;
 }
 
 /** Копейки → строка рублей для JSON: без хвостовых нулей, как Decimal.toString(). */

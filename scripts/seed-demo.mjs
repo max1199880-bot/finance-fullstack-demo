@@ -20,8 +20,8 @@ const env = (name, fallback) => process.env[name] ?? fallback;
 
 const URL_ = env('SUPABASE_URL', env('VITE_SUPABASE_URL', 'http://127.0.0.1:54321'));
 const SERVICE_KEY = env('SUPABASE_SERVICE_ROLE_KEY');
-const EMAIL = env('DEMO_EMAIL', 'demo@finance-demo.app');
-const PASSWORD = env('VITE_DEMO_PASSWORD', 'demo-password');
+const EMAIL = env('DEMO_EMAIL', 'demo@example.com');
+const PASSWORD = env('VITE_DEMO_PASSWORD', 'demo-password-2026');
 
 if (!SERVICE_KEY) {
   console.error('Нет SUPABASE_SERVICE_ROLE_KEY. Скопируйте .env.example в .env.local и заполните.');
@@ -31,13 +31,11 @@ if (!SERVICE_KEY) {
 // ── 1. Собираем генератор демо-данных ───────────────────────────────────────
 const tmp = `${root}.tmp-seed`;
 mkdirSync(tmp, { recursive: true });
-execFileSync(`${root}node_modules/.bin/esbuild`, [
-  `${root}src/demo/seed.ts`,
-  '--bundle',
-  '--format=esm',
-  '--platform=node',
-  `--outfile=${tmp}/seed.mjs`,
-], { stdio: 'inherit' });
+execFileSync(
+  `${root}node_modules/.bin/esbuild`,
+  [`${root}src/demo/seed.ts`, '--bundle', '--format=esm', '--platform=node', `--outfile=${tmp}/seed.mjs`],
+  { stdio: 'inherit' },
+);
 const { createSeed } = await import(`${tmp}/seed.mjs`);
 const db = createSeed();
 
@@ -56,6 +54,9 @@ const created = await admin.auth.admin.createUser({
   password: PASSWORD,
   email_confirm: true,
   user_metadata: { display_name: 'Демо' },
+  // Пометка демо — в app_metadata: её меняет только сервер, а база по ней запрещает
+  // удаление данных и смену пароля (миграция security_hardening).
+  app_metadata: { demo: true },
 });
 if (created.error) throw created.error;
 const userId = created.data.user.id;
@@ -66,10 +67,13 @@ await admin.from('categories').delete().eq('user_id', userId);
 await admin.from('income_sources').delete().eq('user_id', userId);
 await admin.from('accounts').delete().eq('user_id', userId);
 
-await admin.from('profiles').update({
-  onboarding_completed: true,
-  month_start_day: db.user.monthStartDay,
-}).eq('id', userId);
+await admin
+  .from('profiles')
+  .update({
+    onboarding_completed: true,
+    month_start_day: db.user.monthStartDay,
+  })
+  .eq('id', userId);
 
 // ── 3. Перенос данных ───────────────────────────────────────────────────────
 const money = (kopecks) => {
@@ -96,62 +100,110 @@ const insert = async (table, rows) => {
 
 const counts = {};
 
-counts.categories = await insert('categories', db.categories.map((c) => ({
-  id: uuid(c.id), user_id: userId, name: c.name, type: c.type,
-  is_active: c.isActive, order: c.order, emoji: c.emoji ?? null,
-})));
+counts.categories = await insert(
+  'categories',
+  db.categories.map((c) => ({
+    id: uuid(c.id),
+    user_id: userId,
+    name: c.name,
+    type: c.type,
+    is_active: c.isActive,
+    order: c.order,
+    emoji: c.emoji ?? null,
+  })),
+);
 
-counts.income_sources = await insert('income_sources', db.incomeSources.map((s) => ({
-  id: uuid(s.id), user_id: userId, name: s.name, is_active: s.isActive, emoji: s.emoji ?? null,
-})));
+counts.income_sources = await insert(
+  'income_sources',
+  db.incomeSources.map((s) => ({
+    id: uuid(s.id),
+    user_id: userId,
+    name: s.name,
+    is_active: s.isActive,
+    emoji: s.emoji ?? null,
+  })),
+);
 
 // Кредит в генераторе лежит отдельной записью, а в базе это поля счёта того же id.
 const creditByAccount = new Map((db.credits ?? []).map((c) => [c.id, c]));
-counts.accounts = await insert('accounts', db.accounts.map((a) => {
-  const credit = creditByAccount.get(a.id);
-  return {
-    id: uuid(a.id), user_id: userId, name: a.name, type: a.type, is_active: a.isActive,
-    purchase_price: a.purchasePrice != null ? money(a.purchasePrice) : null,
-    liability: a.liability ?? false,
-    credit_rate: credit ? String(credit.rate) : null,
-    credit_term_months: credit ? credit.termMonths : null,
-    credit_original_amount: credit ? money(credit.originalAmount) : null,
-    credit_start_date: credit ? new Date(credit.startDate).toISOString().slice(0, 10) : null,
-    credit_payment_day: credit ? credit.paymentDay ?? null : null,
-  };
-}));
+counts.accounts = await insert(
+  'accounts',
+  db.accounts.map((a) => {
+    const credit = creditByAccount.get(a.id);
+    return {
+      id: uuid(a.id),
+      user_id: userId,
+      name: a.name,
+      type: a.type,
+      is_active: a.isActive,
+      purchase_price: a.purchasePrice != null ? money(a.purchasePrice) : null,
+      liability: a.liability ?? false,
+      credit_rate: credit ? String(credit.rate) : null,
+      credit_term_months: credit ? credit.termMonths : null,
+      credit_original_amount: credit ? money(credit.originalAmount) : null,
+      credit_start_date: credit ? new Date(credit.startDate).toISOString().slice(0, 10) : null,
+      credit_payment_day: credit ? (credit.paymentDay ?? null) : null,
+    };
+  }),
+);
 
-counts.account_balances = await insert('account_balances', db.snapshots.map((b) => ({
-  account_id: uuid(b.accountId), date: new Date(b.date).toISOString(), balance: money(b.balance),
-})));
+counts.account_balances = await insert(
+  'account_balances',
+  db.snapshots.map((b) => ({
+    account_id: uuid(b.accountId),
+    date: new Date(b.date).toISOString(),
+    balance: money(b.balance),
+  })),
+);
 
-counts.transactions = await insert('transactions', db.transactions.map((t) => ({
-  id: uuid(t.id), user_id: userId, date: new Date(t.date).toISOString(), amount: money(t.amount),
-  type: t.type,
-  category_id: t.categoryId ? uuid(t.categoryId) : null,
-  income_source_id: t.incomeSourceId ? uuid(t.incomeSourceId) : null,
-  from_account_id: t.fromAccountId ? uuid(t.fromAccountId) : null,
-  to_account_id: t.toAccountId ? uuid(t.toAccountId) : null,
-  linked_asset_id: t.linkedAssetId ? uuid(t.linkedAssetId) : null,
-  principal_part: t.principalPart != null ? money(t.principalPart) : null,
-  interest_part: t.interestPart != null ? money(t.interestPart) : null,
-  comment: t.comment ?? null,
-})));
+counts.transactions = await insert(
+  'transactions',
+  db.transactions.map((t) => ({
+    id: uuid(t.id),
+    user_id: userId,
+    date: new Date(t.date).toISOString(),
+    amount: money(t.amount),
+    type: t.type,
+    category_id: t.categoryId ? uuid(t.categoryId) : null,
+    income_source_id: t.incomeSourceId ? uuid(t.incomeSourceId) : null,
+    from_account_id: t.fromAccountId ? uuid(t.fromAccountId) : null,
+    to_account_id: t.toAccountId ? uuid(t.toAccountId) : null,
+    linked_asset_id: t.linkedAssetId ? uuid(t.linkedAssetId) : null,
+    principal_part: t.principalPart != null ? money(t.principalPart) : null,
+    interest_part: t.interestPart != null ? money(t.interestPart) : null,
+    comment: t.comment ?? null,
+  })),
+);
 
-counts.feedback = await insert('feedback', (db.feedback ?? []).map((f) => ({
-  user_id: userId, message: f.message, created_at: new Date(f.createdAt).toISOString(),
-})));
+counts.feedback = await insert(
+  'feedback',
+  (db.feedback ?? []).map((f) => ({
+    user_id: userId,
+    message: f.message,
+    created_at: new Date(f.createdAt).toISOString(),
+  })),
+);
 
-counts.budget_plan_month = await insert('budget_plan_month', (db.categoryPlans ?? []).map((p) => ({
-  user_id: userId, month: p.month, category_id: uuid(p.categoryId), planned_amount: money(p.amount),
-})));
+counts.budget_plan_month = await insert(
+  'budget_plan_month',
+  (db.categoryPlans ?? []).map((p) => ({
+    user_id: userId,
+    month: p.month,
+    category_id: uuid(p.categoryId),
+    planned_amount: money(p.amount),
+  })),
+);
 
-counts.budget_plan_global = await insert('budget_plan_global', (db.globalPlans ?? []).map((p) => ({
-  user_id: userId, month: p.month,
-  planned_total_expenses: p.plannedTotalExpenses != null ? money(p.plannedTotalExpenses) : null,
-  planned_total_income: p.plannedTotalIncome != null ? money(p.plannedTotalIncome) : null,
-  planned_investments: p.plannedInvestments != null ? money(p.plannedInvestments) : null,
-})));
+counts.budget_plan_global = await insert(
+  'budget_plan_global',
+  (db.globalPlans ?? []).map((p) => ({
+    user_id: userId,
+    month: p.month,
+    planned_total_expenses: p.plannedTotalExpenses != null ? money(p.plannedTotalExpenses) : null,
+    planned_total_income: p.plannedTotalIncome != null ? money(p.plannedTotalIncome) : null,
+    planned_investments: p.plannedInvestments != null ? money(p.plannedInvestments) : null,
+  })),
+);
 
 rmSync(tmp, { recursive: true, force: true });
 

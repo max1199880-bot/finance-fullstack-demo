@@ -14,13 +14,20 @@
   --ios-accent-soft: rgba(0, 122, 255, 0.12);
 
   /* Duotone icon tints — one hue per domain (light theme). */
-  --t-blue-bg: rgba(0, 122, 255, 0.14);   --t-blue: #007aff;
-  --t-green-bg: rgba(52, 199, 89, 0.16);  --t-green: #1fa855;
-  --t-purple-bg: rgba(175, 82, 222, 0.15);--t-purple: #9b3fd0;
-  --t-orange-bg: rgba(255, 149, 0, 0.16); --t-orange: #d97a00;
-  --t-red-bg: rgba(255, 59, 48, 0.14);    --t-red: #e03127;
-  --t-teal-bg: rgba(48, 176, 199, 0.16);  --t-teal: #1a97ad;
-  --t-accent-bg: var(--ios-accent-soft);  --t-accent: var(--ios-accent);
+  --t-blue-bg: rgba(0, 122, 255, 0.14);
+  --t-blue: #007aff;
+  --t-green-bg: rgba(52, 199, 89, 0.16);
+  --t-green: #1fa855;
+  --t-purple-bg: rgba(175, 82, 222, 0.15);
+  --t-purple: #9b3fd0;
+  --t-orange-bg: rgba(255, 149, 0, 0.16);
+  --t-orange: #d97a00;
+  --t-red-bg: rgba(255, 59, 48, 0.14);
+  --t-red: #e03127;
+  --t-teal-bg: rgba(48, 176, 199, 0.16);
+  --t-teal: #1a97ad;
+  --t-accent-bg: var(--ios-accent-soft);
+  --t-accent: var(--ios-accent);
 
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -39,12 +46,18 @@
     --ios-accent-soft: rgba(10, 132, 255, 0.18);
 
     /* Duotone icon tints — brighter fg + stronger bg for dark ground. */
-    --t-blue-bg: rgba(10, 132, 255, 0.22);  --t-blue: #4aa3ff;
-    --t-green-bg: rgba(48, 209, 88, 0.20);  --t-green: #46d46a;
-    --t-purple-bg: rgba(191, 90, 242, 0.22);--t-purple: #cf7bf5;
-    --t-orange-bg: rgba(255, 159, 10, 0.20);--t-orange: #ffab3a;
-    --t-red-bg: rgba(255, 69, 58, 0.22);    --t-red: #ff6a60;
-    --t-teal-bg: rgba(64, 200, 224, 0.20);  --t-teal: #55c8e0;
+    --t-blue-bg: rgba(10, 132, 255, 0.22);
+    --t-blue: #4aa3ff;
+    --t-green-bg: rgba(48, 209, 88, 0.2);
+    --t-green: #46d46a;
+    --t-purple-bg: rgba(191, 90, 242, 0.22);
+    --t-purple: #cf7bf5;
+    --t-orange-bg: rgba(255, 159, 10, 0.2);
+    --t-orange: #ffab3a;
+    --t-red-bg: rgba(255, 69, 58, 0.22);
+    --t-red: #ff6a60;
+    --t-teal-bg: rgba(64, 200, 224, 0.2);
+    --t-teal: #55c8e0;
   }
 }
 
@@ -70,9 +83,17 @@ button {
 }
 
 /* iOS-style group cards: rounded-only-on-edges variant. */
-.group-card-top { border-top-left-radius: 12px; border-top-right-radius: 12px; }
-.group-card-bottom { border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
-.group-card-only { border-radius: 12px; }
+.group-card-top {
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+.group-card-bottom {
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+.group-card-only {
+  border-radius: 12px;
+}
 
 /* Disable text selection on UI chrome. */
 .select-none-ui {

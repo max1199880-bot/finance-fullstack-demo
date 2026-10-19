@@ -64,7 +64,9 @@ export function isInsideTelegram(): boolean {
   return tgInitData().length > 0;
 }
 
-export function haptic(kind: 'light' | 'medium' | 'heavy' | 'success' | 'warning' | 'error' | 'select'): void {
+export function haptic(
+  kind: 'light' | 'medium' | 'heavy' | 'success' | 'warning' | 'error' | 'select',
+): void {
   // Inside Telegram: use the rich native haptic engine.
   if (tg?.HapticFeedback) {
     try {

@@ -47,8 +47,7 @@ export function IncomeSourceList({
   };
 
   const setEmoji = useMutation({
-    mutationFn: (args: { id: string; emoji: string | null }) =>
-      api.setIncomeSourceEmoji(args.id, args.emoji),
+    mutationFn: (args: { id: string; emoji: string | null }) => api.setIncomeSourceEmoji(args.id, args.emoji),
     onSuccess: async () => {
       haptic('success');
       await invalidateAll();
@@ -94,9 +93,7 @@ export function IncomeSourceList({
     onSuccess: async (res) => {
       haptic('warning');
       await invalidateAll();
-      alertDialog(
-        `Источник удалён навсегда вместе с ${res.deletedTransactions} операциями.`,
-      );
+      alertDialog(`Источник удалён навсегда вместе с ${res.deletedTransactions} операциями.`);
     },
     onError: (e) => {
       haptic('error');
@@ -106,12 +103,16 @@ export function IncomeSourceList({
 
   const askDelete = (s: IncomeSourceDTO) => {
     const msg = `Удалить источник «${s.name}»? Если есть связанные доходы — он будет скрыт.`;
-    confirmDialog(msg).then((ok) => { if (ok) remove.mutate(s.id); });
+    confirmDialog(msg).then((ok) => {
+      if (ok) remove.mutate(s.id);
+    });
   };
 
   const askRestore = (id: string, name: string) => {
     const msg = `Восстановить источник «${name}»?`;
-    confirmDialog(msg).then((ok) => { if (ok) restore.mutate(id); });
+    confirmDialog(msg).then((ok) => {
+      if (ok) restore.mutate(id);
+    });
   };
 
   const askPurge = (id: string, name: string, txCount: number) => {
@@ -119,7 +120,9 @@ export function IncomeSourceList({
       txCount > 0
         ? `Удалить «${name}» НАВСЕГДА вместе с ${txCount} операциями? Действие необратимо.`
         : `Удалить «${name}» навсегда?`;
-    confirmDialog(msg).then((ok) => { if (ok) purge.mutate(id); });
+    confirmDialog(msg).then((ok) => {
+      if (ok) purge.mutate(id);
+    });
   };
 
   return (
@@ -131,9 +134,7 @@ export function IncomeSourceList({
       )}
       <div className={compact ? 'overflow-hidden' : 'bg-ios-surface rounded-ios-lg overflow-hidden'}>
         {(active.data ?? []).length === 0 && (
-          <div className="px-4 py-4 text-sm text-ios-hint">
-            Нет источников. Создай первый ниже.
-          </div>
+          <div className="px-4 py-4 text-sm text-ios-hint">Нет источников. Создай первый ниже.</div>
         )}
         {(active.data ?? []).map((s, i, arr) => (
           <div
@@ -192,9 +193,7 @@ export function IncomeSourceList({
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-base text-ios-subtext truncate">{s.name}</div>
                   {s.txCount > 0 && (
-                    <div className="text-[11px] text-ios-hint mt-0.5">
-                      связано {s.txCount} операций
-                    </div>
+                    <div className="text-[11px] text-ios-hint mt-0.5">связано {s.txCount} операций</div>
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
@@ -292,7 +291,10 @@ function RenameSheet({
         <div className="flex gap-2 mt-3">
           <button
             type="button"
-            onClick={() => { setName(target.name); onClose(); }}
+            onClick={() => {
+              setName(target.name);
+              onClose();
+            }}
             className="flex-1 bg-ios-surface rounded-ios py-3 font-medium"
           >
             Отмена
@@ -365,7 +367,11 @@ function CreateSheet({
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => { setName(''); setEmoji(null); onClose(); }}
+              onClick={() => {
+                setName('');
+                setEmoji(null);
+                onClose();
+              }}
               className="flex-1 bg-ios-surface rounded-ios py-3 font-medium"
             >
               Отмена
@@ -385,7 +391,10 @@ function CreateSheet({
         open={emojiOpen}
         current={emoji}
         onClose={() => setEmojiOpen(false)}
-        onPick={(em) => { setEmoji(em); setEmojiOpen(false); }}
+        onPick={(em) => {
+          setEmoji(em);
+          setEmojiOpen(false);
+        }}
       />
     </>
   );

@@ -2,11 +2,7 @@ import { useEffect, useState } from 'react';
 import { alertDialog, confirmDialog, popupDialog } from '../lib/dialog';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, type TransactionDTO, type AccountDTO } from '../lib/api';
-import {
-  MUTATION_KEYS,
-  type DeleteTxVariables,
-  type UpdateTxVariables,
-} from '../lib/mutationDefaults';
+import { MUTATION_KEYS, type DeleteTxVariables, type UpdateTxVariables } from '../lib/mutationDefaults';
 import { Sheet } from './Sheet';
 import { AmountKeypad } from './AmountKeypad';
 import { fmtRub, fmtDate, categoryEmoji } from '../lib/format';
@@ -14,13 +10,7 @@ import { haptic } from '../lib/telegram';
 
 type View = 'menu' | 'amount' | 'category' | 'source' | 'account' | 'comment';
 
-export function TransactionEditor({
-  tx,
-  onClose,
-}: {
-  tx: TransactionDTO | null;
-  onClose: () => void;
-}) {
+export function TransactionEditor({ tx, onClose }: { tx: TransactionDTO | null; onClose: () => void }) {
   const [view, setView] = useState<View>('menu');
   const qc = useQueryClient();
 
@@ -236,7 +226,14 @@ export function TransactionEditor({
           />
         )}
 
-        {view === 'comment' && <CommentEditor initial={tx.comment ?? ''} onCancel={() => setView('menu')} onSave={(c) => fireUpdate({ comment: c || null })} busy={update.isPending} />}
+        {view === 'comment' && (
+          <CommentEditor
+            initial={tx.comment ?? ''}
+            onCancel={() => setView('menu')}
+            onSave={(c) => fireUpdate({ comment: c || null })}
+            busy={update.isPending}
+          />
+        )}
       </div>
     </Sheet>
   );
@@ -328,7 +325,9 @@ function AccountPicker({
                 <span className="font-medium">{a.name}</span>
                 <span className="text-xs text-ios-hint mt-0.5">{ACCOUNT_TYPE_LABEL[a.type]}</span>
               </div>
-              <span className="text-sm text-ios-hint tabular-nums">{fmtRub(a.balance, { compact: true })}</span>
+              <span className="text-sm text-ios-hint tabular-nums">
+                {fmtRub(a.balance, { compact: true })}
+              </span>
             </button>
           ))}
           {current && (
