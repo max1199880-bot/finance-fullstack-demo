@@ -146,7 +146,9 @@ max_catalogs = 2
 
 # Store vector embeddings in S3 for large and durable datasets
 [storage.vector]
-enabled = true
+# Векторные бакеты доступны только на платном тарифе: включённые, они роняли
+# `supabase config push` с ошибкой 402. Проекту они не нужны.
+enabled = false
 max_buckets = 10
 max_indexes = 5
 

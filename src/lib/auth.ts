@@ -18,7 +18,9 @@ function humanize(message: string): string {
   const m = message.toLowerCase();
   if (m.includes('invalid login credentials')) return 'Неверная почта или пароль';
   if (m.includes('user already registered')) return 'Такая почта уже зарегистрирована';
-  if (m.includes('password should be at least')) return 'Пароль короче 6 символов';
+  if (m.includes('password should be at least')) return 'Пароль — не короче 8 символов';
+  if (m.includes('password should contain')) return 'В пароле нужны и буквы, и цифры';
+  if (m.includes('demo') || m.includes('изменить нельзя')) return 'Пароль демо-аккаунта изменить нельзя';
   if (m.includes('unable to validate email')) return 'Проверьте адрес почты';
   if (m.includes('email rate limit') || m.includes('too many requests')) {
     return 'Слишком много попыток, подождите минуту';
