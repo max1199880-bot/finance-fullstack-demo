@@ -21,11 +21,16 @@ export async function monthTotals(ctx: Ctx, month: string): Promise<MonthTotals>
   const { from, to } = monthRange(month, month_start_day);
 
   const [tx, global, perCategory] = await Promise.all([
-    ctx.db.from('transactions').select('amount, type')
-      .gte('date', from.toISOString()).lt('date', to.toISOString()),
-    ctx.db.from('budget_plan_global')
+    ctx.db
+      .from('transactions')
+      .select('amount, type')
+      .gte('date', from.toISOString())
+      .lt('date', to.toISOString()),
+    ctx.db
+      .from('budget_plan_global')
       .select('planned_total_expenses, planned_total_income, planned_investments')
-      .eq('month', month).maybeSingle(),
+      .eq('month', month)
+      .maybeSingle(),
     ctx.db.from('budget_plan_month').select('planned_amount').eq('month', month),
   ]);
   if (tx.error) throw new Error(tx.error.message);
@@ -33,17 +38,22 @@ export async function monthTotals(ctx: Ctx, month: string): Promise<MonthTotals>
   const rows = rowsOf<{ amount: string; type: string }>(tx.data);
   const sumOf = (type: string) => sumAmounts(rows.filter((r) => r.type === type));
 
-  const categorySum = rowsOf<{ planned_amount: string }>(perCategory.data)
-    .reduce((acc, r) => acc + fromDb(r.planned_amount), 0);
-  const g = global.data as
-    | { planned_total_expenses: string | null; planned_total_income: string | null; planned_investments: string | null }
-    | null;
+  const categorySum = rowsOf<{ planned_amount: string }>(perCategory.data).reduce(
+    (acc, r) => acc + fromDb(r.planned_amount),
+    0,
+  );
+  const g = global.data as {
+    planned_total_expenses: string | null;
+    planned_total_income: string | null;
+    planned_investments: string | null;
+  } | null;
 
-  const plannedExpenses = g?.planned_total_expenses != null
-    ? fromDb(g.planned_total_expenses)
-    : categorySum > 0
-    ? categorySum
-    : null;
+  const plannedExpenses =
+    g?.planned_total_expenses != null
+      ? fromDb(g.planned_total_expenses)
+      : categorySum > 0
+        ? categorySum
+        : null;
 
   return {
     income: sumOf('income'),
@@ -75,13 +85,22 @@ export async function monthSummaryDTO(ctx: Ctx, month: string) {
  * Net Worth = деньги + инвестиции + прочее имущество + подушки под кредиты − долги.
  * Подушка считается своими деньгами: она просто отложена на будущие платежи.
  */
-export async function capitalTotals(ctx: Ctx): Promise<{ accounts: AccountRow[]; balances: Map<string, Kopecks>; totals: Record<string, string> }> {
+export async function capitalTotals(
+  ctx: Ctx,
+): Promise<{ accounts: AccountRow[]; balances: Map<string, Kopecks>; totals: Record<string, string> }> {
   const { data, error } = await ctx.db.from('accounts').select(ACCOUNT_FIELDS).eq('is_active', true);
   if (error) throw new Error(error.message);
   const accounts = rowsOf<AccountRow>(data);
-  const balances = await balancesOf(ctx, accounts.map((a) => a.id));
+  const balances = await balancesOf(
+    ctx,
+    accounts.map((a) => a.id),
+  );
 
-  let cash = 0, investments = 0, other = 0, credits = 0, buffers = 0;
+  let cash = 0,
+    investments = 0,
+    other = 0,
+    credits = 0,
+    buffers = 0;
   for (const a of accounts) {
     const b = balances.get(a.id) ?? 0;
     if (a.type === 'cash' || a.type === 'bank') cash += b;

@@ -71,7 +71,9 @@ export function OfflineBanner() {
         paddingBottom: 6,
       }}
     >
-      <span className="flex-1 text-center">{icon} {text}</span>
+      <span className="flex-1 text-center">
+        {icon} {text}
+      </span>
       {/* Dismiss button: clears mutation cache, hides banner immediately */}
       <button
         type="button"

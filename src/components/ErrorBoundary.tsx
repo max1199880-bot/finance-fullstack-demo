@@ -15,10 +15,7 @@ interface State {
  * entirely and reloads — a clean recovery path the user can hit without
  * uninstalling the Telegram mini-app.
  */
-export class ErrorBoundary extends React.Component<
-  { children: React.ReactNode },
-  State
-> {
+export class ErrorBoundary extends React.Component<{ children: React.ReactNode }, State> {
   state: State = { error: null };
 
   static getDerivedStateFromError(error: Error): State {
@@ -27,7 +24,7 @@ export class ErrorBoundary extends React.Component<
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     // Surface to console so the user can screenshot it for the maintainer.
-    // eslint-disable-next-line no-console
+
     console.error('[ErrorBoundary] render crashed:', error, info);
   }
 
@@ -66,9 +63,7 @@ export class ErrorBoundary extends React.Component<
         }}
       >
         <div style={{ fontSize: '40px' }}>⚠️</div>
-        <div style={{ fontSize: '17px', fontWeight: 600 }}>
-          Приложение не смогло загрузиться
-        </div>
+        <div style={{ fontSize: '17px', fontWeight: 600 }}>Приложение не смогло загрузиться</div>
         <div
           style={{
             fontSize: '13px',
@@ -77,8 +72,8 @@ export class ErrorBoundary extends React.Component<
             lineHeight: 1.4,
           }}
         >
-          Обычно это значит что в кеше браузера остался устаревший снимок данных
-          от прошлой версии. Очисти кеш и приложение откроется.
+          Обычно это значит что в кеше браузера остался устаревший снимок данных от прошлой версии. Очисти кеш
+          и приложение откроется.
         </div>
         <button
           type="button"

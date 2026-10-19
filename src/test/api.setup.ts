@@ -33,8 +33,8 @@ export async function createUser(prefix = 'test'): Promise<Client> {
 export async function signInDemo(): Promise<Client> {
   const supabase = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false } });
   const { data, error } = await supabase.auth.signInWithPassword({
-    email: 'demo@finance-demo.app',
-    password: process.env.VITE_DEMO_PASSWORD ?? 'demo-password',
+    email: 'demo@example.com',
+    password: process.env.VITE_DEMO_PASSWORD ?? 'demo-password-2026',
   });
   if (error) throw new Error(`Вход в демо не удался (запускали npm run seed:demo?): ${error.message}`);
   return { token: data.session!.access_token, userId: data.user!.id, email: data.user!.email! };

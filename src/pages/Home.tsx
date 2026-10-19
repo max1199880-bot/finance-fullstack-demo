@@ -106,15 +106,15 @@ export function HomePage({
           <div className="bg-ios-surface rounded-ios-lg p-4 shadow-card">
             <div className="text-2xl mb-2">👋 Привет!</div>
             <div className="text-sm text-ios-subtext leading-snug">
-              Это твоя личная книга финансов. Все данные хранятся за тобой,
-              никто другой их не видит.
+              Это твоя личная книга финансов. Все данные хранятся за тобой, никто другой их не видит.
             </div>
             <div className="mt-3 space-y-2 text-sm">
               <div className="flex gap-2.5">
-                <span className="shrink-0 w-6 h-6 bg-ios-accent text-white rounded-full flex items-center justify-center text-xs font-bold">1</span>
+                <span className="shrink-0 w-6 h-6 bg-ios-accent text-white rounded-full flex items-center justify-center text-xs font-bold">
+                  1
+                </span>
                 <div>
-                  <span className="font-medium">Внеси текущие остатки</span> по
-                  банкам и наличным —{' '}
+                  <span className="font-medium">Внеси текущие остатки</span> по банкам и наличным —{' '}
                   <button
                     type="button"
                     onClick={() => onGoTo('capital')}
@@ -125,10 +125,11 @@ export function HomePage({
                 </div>
               </div>
               <div className="flex gap-2.5">
-                <span className="shrink-0 w-6 h-6 bg-ios-accent text-white rounded-full flex items-center justify-center text-xs font-bold">2</span>
+                <span className="shrink-0 w-6 h-6 bg-ios-accent text-white rounded-full flex items-center justify-center text-xs font-bold">
+                  2
+                </span>
                 <div>
-                  <span className="font-medium">Задай план расходов</span> по
-                  категориям на месяц —{' '}
+                  <span className="font-medium">Задай план расходов</span> по категориям на месяц —{' '}
                   <button
                     type="button"
                     onClick={() => onGoTo('budget')}
@@ -139,10 +140,11 @@ export function HomePage({
                 </div>
               </div>
               <div className="flex gap-2.5">
-                <span className="shrink-0 w-6 h-6 bg-ios-accent text-white rounded-full flex items-center justify-center text-xs font-bold">3</span>
+                <span className="shrink-0 w-6 h-6 bg-ios-accent text-white rounded-full flex items-center justify-center text-xs font-bold">
+                  3
+                </span>
                 <div>
-                  <span className="font-medium">Записывай операции</span>{' '}
-                  кнопкой
+                  <span className="font-medium">Записывай операции</span> кнопкой
                   <button
                     type="button"
                     onClick={() => onGoTo('add')}
@@ -154,7 +156,9 @@ export function HomePage({
                 </div>
               </div>
               <div className="flex gap-2.5">
-                <span className="shrink-0 w-6 h-6 bg-ios-accent text-white rounded-full flex items-center justify-center text-xs font-bold">4</span>
+                <span className="shrink-0 w-6 h-6 bg-ios-accent text-white rounded-full flex items-center justify-center text-xs font-bold">
+                  4
+                </span>
                 <div>
                   Через пару записей появятся{' '}
                   <button
@@ -179,9 +183,7 @@ export function HomePage({
           className="w-full text-left bg-gradient-to-br from-ios-accent to-[#5856D6] text-white rounded-ios-lg p-5 shadow-lg active:scale-[0.99] transition-transform"
         >
           <div className="text-sm opacity-80">Расход за {fmtMonth(s.month)}</div>
-          <div className="text-4xl font-rounded font-bold mt-1 tabular-nums">
-            {fmtRub(s.totalExpenses)}
-          </div>
+          <div className="text-4xl font-rounded font-bold mt-1 tabular-nums">{fmtRub(s.totalExpenses)}</div>
 
           <div className="mt-3">
             <ProgressBar percent={s.expensePF.percent} status={s.expensePF.status} />
@@ -263,7 +265,10 @@ export function HomePage({
             </h2>
             <button
               type="button"
-              onClick={() => { haptic('light'); setShowAllTxs(true); }}
+              onClick={() => {
+                haptic('light');
+                setShowAllTxs(true);
+              }}
               className="text-ios-accent text-sm font-medium"
             >
               Все →
@@ -279,11 +284,7 @@ export function HomePage({
                 const sign = t.type === 'income' ? '+' : t.type === 'expense' ? '−' : '';
                 const acc = txAccount(t);
                 const color =
-                  t.type === 'income'
-                    ? 'text-ios-green'
-                    : t.type === 'expense'
-                      ? ''
-                      : 'text-ios-accent';
+                  t.type === 'income' ? 'text-ios-green' : t.type === 'expense' ? '' : 'text-ios-accent';
                 const showHeader = i === 0 || dayKey(t.date) !== dayKey(txs[i - 1].date);
                 return (
                   <Fragment key={t.id}>
@@ -352,7 +353,13 @@ export function HomePage({
 type TxPeriod = '7d' | 'cur' | 'prev' | '3m' | 'all' | 'custom';
 type TxTypeFilter = 'all' | 'expense' | 'income' | 'investment' | 'other_asset';
 
-const TYPE_LABEL: Record<TxTypeFilter, string> = { all: 'Все', expense: 'Расходы', income: 'Доходы', investment: 'Инвест.', other_asset: 'Прочие активы' };
+const TYPE_LABEL: Record<TxTypeFilter, string> = {
+  all: 'Все',
+  expense: 'Расходы',
+  income: 'Доходы',
+  investment: 'Инвест.',
+  other_asset: 'Прочие активы',
+};
 
 function monthName(offset = 0): string {
   const d = new Date();
@@ -375,14 +382,16 @@ function periodApiDates(p: TxPeriod, from: string, to: string): { from?: string;
   if (p === '7d') return { from: new Date(Date.now() - 7 * 86_400_000).toISOString() };
   if (p === '3m') return { from: new Date(Date.now() - 90 * 86_400_000).toISOString() };
   if (p === 'all') return {};
-  if (p === 'cur') return {
-    from: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(),
-    to: new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString(),
-  };
-  if (p === 'prev') return {
-    from: new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString(),
-    to: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(),
-  };
+  if (p === 'cur')
+    return {
+      from: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(),
+      to: new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString(),
+    };
+  if (p === 'prev')
+    return {
+      from: new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString(),
+      to: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(),
+    };
   if (p === 'custom' && from && to) {
     const toDate = new Date(to);
     toDate.setDate(toDate.getDate() + 1);
@@ -426,7 +435,9 @@ function AllTransactionsSheet({ onClose }: { onClose: () => void }) {
     return Array.from(map, ([id, name]) => ({ id, name }));
   }, [txQuery.data]);
 
-  useEffect(() => { setCategoryId(null); }, [txType]);
+  useEffect(() => {
+    setCategoryId(null);
+  }, [txType]);
 
   const displayed = useMemo(() => {
     const all = txQuery.data ?? [];
@@ -434,7 +445,8 @@ function AllTransactionsSheet({ onClose }: { onClose: () => void }) {
   }, [txQuery.data, categoryId]);
 
   const totals = useMemo(() => {
-    let income = 0, expense = 0;
+    let income = 0,
+      expense = 0;
     for (const tx of displayed) {
       if (tx.type === 'income') income += parseFloat(tx.amount);
       else if (tx.type === 'expense') expense += parseFloat(tx.amount);
@@ -483,7 +495,9 @@ function AllTransactionsSheet({ onClose }: { onClose: () => void }) {
             </div>
             {txType === 'expense' && categories.length > 0 && (
               <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
-                <TxFilterChip active={categoryId === null} onClick={() => setCategoryId(null)}>Все</TxFilterChip>
+                <TxFilterChip active={categoryId === null} onClick={() => setCategoryId(null)}>
+                  Все
+                </TxFilterChip>
                 {categories.map((c) => (
                   <TxFilterChip key={c.id} active={categoryId === c.id} onClick={() => setCategoryId(c.id)}>
                     {categoryEmoji(c.name)} {c.name}
@@ -539,8 +553,13 @@ function AllTransactionsSheet({ onClose }: { onClose: () => void }) {
                     <div
                       role="button"
                       tabIndex={0}
-                      onClick={() => { haptic('light'); setEditingTx(tx); }}
-                      onKeyDown={(e) => { if (e.key === 'Enter') setEditingTx(tx); }}
+                      onClick={() => {
+                        haptic('light');
+                        setEditingTx(tx);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') setEditingTx(tx);
+                      }}
                       className={`flex items-center gap-3 px-4 py-3 cursor-pointer active:bg-black/5 dark:active:bg-white/5 select-none ${
                         i !== displayed.length - 1 ? 'border-b border-ios-divider' : ''
                       }`}
@@ -555,7 +574,8 @@ function AllTransactionsSheet({ onClose }: { onClose: () => void }) {
                         </div>
                       </div>
                       <span className={`text-sm font-semibold tabular-nums shrink-0 ${color}`}>
-                        {sign}{fmtRub(tx.amount, { compact: true })}
+                        {sign}
+                        {fmtRub(tx.amount, { compact: true })}
                       </span>
                     </div>
                   </Fragment>
@@ -589,7 +609,10 @@ function TxFilterChip({
   return (
     <button
       type="button"
-      onClick={() => { haptic('select'); onClick(); }}
+      onClick={() => {
+        haptic('select');
+        onClick();
+      }}
       className={`shrink-0 text-[12px] px-3 py-1.5 rounded-full font-medium transition ${
         active ? 'bg-ios-accent text-white' : 'bg-ios-surface text-ios-subtext'
       }`}

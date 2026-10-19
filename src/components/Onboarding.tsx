@@ -18,8 +18,7 @@ const STEPS: Step[] = [
     title: 'Финансы под контролем',
     body: (
       <>
-        Этот бот поможет считать расходы, ставить планы и видеть, куда уходят
-        деньги.
+        Этот бот поможет считать расходы, ставить планы и видеть, куда уходят деньги.
         <br />
         <br />
         <b>Все данные хранятся за тобой</b> — никто другой их не видит.
@@ -33,12 +32,11 @@ const STEPS: Step[] = [
     title: 'Внеси остатки',
     body: (
       <>
-        Открой <b>Капитал</b> в нижнем баре и проставь текущие суммы по своим
-        счетам — Сбербанк, Тинькофф, Наличные, Инвестиции.
+        Открой <b>Капитал</b> в нижнем баре и проставь текущие суммы по своим счетам — Сбербанк, Тинькофф,
+        Наличные, Инвестиции.
         <br />
         <br />
-        Если у тебя есть банк, которого нет в списке — кнопкой <b>＋ Банк</b>{' '}
-        справа в шапке.
+        Если у тебя есть банк, которого нет в списке — кнопкой <b>＋ Банк</b> справа в шапке.
       </>
     ),
     cta: 'Дальше',
@@ -49,12 +47,12 @@ const STEPS: Step[] = [
     title: 'Задай план на месяц',
     body: (
       <>
-        Вкладка <b>Бюджет</b> → тапни на категорию (например, Продукты) → введи
-        сумму, которую готов потратить.
+        Вкладка <b>Бюджет</b> → тапни на категорию (например, Продукты) → введи сумму, которую готов
+        потратить.
         <br />
         <br />
-        Включи <b>«Применить к следующим месяцам»</b> — план уйдёт на 12
-        месяцев вперёд, не нужно вбивать каждый раз.
+        Включи <b>«Применить к следующим месяцам»</b> — план уйдёт на 12 месяцев вперёд, не нужно вбивать
+        каждый раз.
       </>
     ),
     cta: 'Дальше',
@@ -65,12 +63,12 @@ const STEPS: Step[] = [
     title: 'Записывай в 3 тапа',
     body: (
       <>
-        Большая <b>＋</b> внизу → выбираешь тип (Расход / Доход / Перевод /
-        Покупка) → категория → сумма → готово.
+        Большая <b>＋</b> внизу → выбираешь тип (Расход / Доход / Перевод / Покупка) → категория → сумма →
+        готово.
         <br />
         <br />
-        Ошибся? На <b>Главной</b> тапни на любую операцию — откроется редактор:
-        правка суммы, категории, удаление.
+        Ошибся? На <b>Главной</b> тапни на любую операцию — откроется редактор: правка суммы, категории,
+        удаление.
       </>
     ),
     cta: 'Дальше',
@@ -81,12 +79,11 @@ const STEPS: Step[] = [
     title: 'Смотри прогресс',
     body: (
       <>
-        Вкладка <b>Аналитика</b>: графики расходов по дням, топ категорий,
-        динамика капитала за 26 недель.
+        Вкладка <b>Аналитика</b>: графики расходов по дням, топ категорий, динамика капитала за 26 недель.
         <br />
         <br />
-        Сравнение с прошлым периодом — стрелочки <span className="text-ios-green">↑</span>{' '}
-        / <span className="text-ios-red">↓</span> с процентами.
+        Сравнение с прошлым периодом — стрелочки <span className="text-ios-green">↑</span> /{' '}
+        <span className="text-ios-red">↓</span> с процентами.
       </>
     ),
     cta: 'Поехали!',
@@ -166,7 +163,10 @@ export function Onboarding({ open, onClose }: Props) {
       onTouchEnd={onTouchEnd}
     >
       {/* Skip button */}
-      <div className="absolute top-0 right-0 z-10" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)', paddingRight: 16 }}>
+      <div
+        className="absolute top-0 right-0 z-10"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)', paddingRight: 16 }}
+      >
         <button
           type="button"
           onClick={skip}
@@ -182,9 +182,7 @@ export function Onboarding({ open, onClose }: Props) {
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 60px)' }}
       >
         {cur.badge && (
-          <div className="text-xs uppercase tracking-widest font-semibold opacity-80 mb-2">
-            {cur.badge}
-          </div>
+          <div className="text-xs uppercase tracking-widest font-semibold opacity-80 mb-2">{cur.badge}</div>
         )}
         <div
           key={step}
@@ -201,9 +199,7 @@ export function Onboarding({ open, onClose }: Props) {
         className="bg-ios-surface rounded-t-3xl px-6 pt-6 pb-6 shadow-2xl"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.25rem)' }}
       >
-        <div className="text-base text-ios-subtext leading-relaxed min-h-[110px]">
-          {cur.body}
-        </div>
+        <div className="text-base text-ios-subtext leading-relaxed min-h-[110px]">{cur.body}</div>
 
         {/* Progress dots */}
         <div className="flex justify-center gap-2 my-5 select-none-ui">

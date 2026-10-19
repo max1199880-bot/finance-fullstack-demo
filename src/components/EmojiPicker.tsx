@@ -11,21 +11,91 @@ import { CATEGORY_ICON_ORDER, makeIconRef, isIconRef, iconRefKey } from '../lib/
  */
 const POPULAR_EMOJIS: string[] = [
   // Food & groceries
-  '🛒', '🍕', '🍔', '🍞', '🥗', '🥦', '🍣', '🍜', '🍱', '☕️', '🍺', '🍷',
+  '🛒',
+  '🍕',
+  '🍔',
+  '🍞',
+  '🥗',
+  '🥦',
+  '🍣',
+  '🍜',
+  '🍱',
+  '☕️',
+  '🍺',
+  '🍷',
   // Transport
-  '🚗', '🚕', '🚌', '🚇', '✈️', '⛽️', '🅿️', '🚲', '🛴', '🚤',
+  '🚗',
+  '🚕',
+  '🚌',
+  '🚇',
+  '✈️',
+  '⛽️',
+  '🅿️',
+  '🚲',
+  '🛴',
+  '🚤',
   // Home & bills
-  '🏠', '💡', '🚿', '📱', '💻', '📺', '🛋', '🪑', '🧺', '🧹',
+  '🏠',
+  '💡',
+  '🚿',
+  '📱',
+  '💻',
+  '📺',
+  '🛋',
+  '🪑',
+  '🧺',
+  '🧹',
   // Entertainment
-  '🎬', '🎮', '🎵', '🎤', '🍿', '🎫', '🎲', '📚', '🎨', '🎯',
+  '🎬',
+  '🎮',
+  '🎵',
+  '🎤',
+  '🍿',
+  '🎫',
+  '🎲',
+  '📚',
+  '🎨',
+  '🎯',
   // Shopping
-  '🛍', '👕', '👟', '👜', '💎', '🎁', '👶', '🐶', '🐱',
+  '🛍',
+  '👕',
+  '👟',
+  '👜',
+  '💎',
+  '🎁',
+  '👶',
+  '🐶',
+  '🐱',
   // Health & sport
-  '💊', '🏋️', '🏥', '🦷', '⚕️', '💆', '🧘', '⚽️', '🏃', '🚴',
+  '💊',
+  '🏋️',
+  '🏥',
+  '🦷',
+  '⚕️',
+  '💆',
+  '🧘',
+  '⚽️',
+  '🏃',
+  '🚴',
   // Money & income
-  '💰', '💳', '💵', '🏦', '📈', '📊', '💼', '🎓',
+  '💰',
+  '💳',
+  '💵',
+  '🏦',
+  '📈',
+  '📊',
+  '💼',
+  '🎓',
   // Misc
-  '🌹', '✨', '🎉', '🔧', '✂️', '📦', '🌿', '🔥', '⭐️',
+  '🌹',
+  '✨',
+  '🎉',
+  '🔧',
+  '✂️',
+  '📦',
+  '🌿',
+  '🔥',
+  '⭐️',
 ];
 
 interface Props {
@@ -94,7 +164,9 @@ export function EmojiPicker({ open, onClose, current, onPick, busy }: Props) {
                   onPick(makeIconRef(k));
                 }}
                 className={`aspect-square rounded-ios flex items-center justify-center active:scale-90 transition select-none-ui ${
-                  k === currentKey ? 'bg-ios-accent/20 ring-2 ring-ios-accent' : 'bg-ios-surface2 dark:bg-black/30'
+                  k === currentKey
+                    ? 'bg-ios-accent/20 ring-2 ring-ios-accent'
+                    : 'bg-ios-surface2 dark:bg-black/30'
                 }`}
               >
                 <CategoryIcon keyOverride={k} style="icons" size={38} />
@@ -113,7 +185,9 @@ export function EmojiPicker({ open, onClose, current, onPick, busy }: Props) {
                   onPick(e);
                 }}
                 className={`aspect-square rounded-md text-2xl flex items-center justify-center active:scale-90 transition select-none-ui ${
-                  e === current ? 'bg-ios-accent/20 ring-2 ring-ios-accent' : 'bg-ios-surface2 dark:bg-black/30'
+                  e === current
+                    ? 'bg-ios-accent/20 ring-2 ring-ios-accent'
+                    : 'bg-ios-surface2 dark:bg-black/30'
                 }`}
               >
                 {e}

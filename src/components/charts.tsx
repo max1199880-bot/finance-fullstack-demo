@@ -48,7 +48,14 @@ export function LineChart({
 
   const { path, area, ymin, ymax, lastPoint, baselineY } = useMemo(() => {
     if (points.length === 0) {
-      return { path: '', area: '', ymin: 0, ymax: 0, lastPoint: null as { x: number; y: number } | null, baselineY: null as number | null };
+      return {
+        path: '',
+        area: '',
+        ymin: 0,
+        ymax: 0,
+        lastPoint: null as { x: number; y: number } | null,
+        baselineY: null as number | null,
+      };
     }
     const ys = points.map((p) => p.y);
     // Include the baseline in the range so its dashed line is always visible.
@@ -85,8 +92,7 @@ export function LineChart({
     };
   }, [points, W, H, baseline]);
 
-  if (points.length === 0)
-    return <div className="text-center py-8 text-ios-hint text-sm">Нет данных</div>;
+  if (points.length === 0) return <div className="text-center py-8 text-ios-hint text-sm">Нет данных</div>;
 
   const showDates = xStartLabel != null || xEndLabel != null;
 
@@ -130,9 +136,23 @@ export function LineChart({
             />
           )}
           {fillUnder && <path d={area} fill="url(#line-fill-grad)" />}
-          <path d={path} fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d={path}
+            fill="none"
+            stroke={color}
+            strokeWidth={2.2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
           {lastPoint && (
-            <circle cx={lastPoint.x} cy={lastPoint.y} r={4} fill={color} stroke="var(--ios-surface)" strokeWidth={2} />
+            <circle
+              cx={lastPoint.x}
+              cy={lastPoint.y}
+              r={4}
+              fill={color}
+              stroke="var(--ios-surface)"
+              strokeWidth={2}
+            />
           )}
         </svg>
       </div>
@@ -167,8 +187,7 @@ export function BarChart({
   const PAD_TOP = 8;
   const PAD_BOTTOM = 22;
 
-  if (bars.length === 0)
-    return <div className="text-center py-8 text-ios-hint text-sm">Нет данных</div>;
+  if (bars.length === 0) return <div className="text-center py-8 text-ios-hint text-sm">Нет данных</div>;
 
   const max = Math.max(...bars.map((b) => b.value), 1);
   const innerW = W - PAD_X * 2;
@@ -310,9 +329,18 @@ export function CategoryBars({
     return <div className="text-center py-8 text-ios-hint text-sm">Нет данных за период</div>;
 
   const COLORS = [
-    '#FF3B30', '#FF9F0A', '#FFD60A', '#34C759',
-    '#5AC8FA', '#007AFF', '#5856D6', '#AF52DE',
-    '#FF2D55', '#A2845E', '#8E8E93', '#34C759',
+    '#FF3B30',
+    '#FF9F0A',
+    '#FFD60A',
+    '#34C759',
+    '#5AC8FA',
+    '#007AFF',
+    '#5856D6',
+    '#AF52DE',
+    '#FF2D55',
+    '#A2845E',
+    '#8E8E93',
+    '#34C759',
   ];
 
   return (

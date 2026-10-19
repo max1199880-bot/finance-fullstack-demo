@@ -1,4 +1,3 @@
-/// <reference types="vitest/config" />
 import { defineConfig } from 'vitest/config';
 
 // Отдельный прогон для интеграционных тестов API: им не нужен jsdom, зато нужен

@@ -64,7 +64,6 @@ export async function enablePush(): Promise<boolean> {
       }));
     const json = sub.toJSON() as { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
     if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
-      // eslint-disable-next-line no-console
       console.error('[push] subscription missing fields', json);
       return false;
     }
@@ -76,7 +75,6 @@ export async function enablePush(): Promise<boolean> {
     console.log('[push] subscribed');
     return true;
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.error('[push] enable failed', e);
     return false;
   }
@@ -95,7 +93,6 @@ export async function disablePush(): Promise<void> {
       console.log('[push] unsubscribed');
     }
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.error('[push] disable failed', e);
   }
 }

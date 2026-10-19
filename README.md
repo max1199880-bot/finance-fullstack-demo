@@ -1,15 +1,24 @@
 # Финансы — фулстек-демо
 
+[![CI/CD](https://github.com/max1199880-bot/finance-fullstack-demo/actions/workflows/ci.yml/badge.svg)](https://github.com/max1199880-bot/finance-fullstack-demo/actions/workflows/ci.yml)
+[![Security](https://github.com/max1199880-bot/finance-fullstack-demo/actions/workflows/security.yml/badge.svg)](https://github.com/max1199880-bot/finance-fullstack-demo/actions/workflows/security.yml)
+[![Monitor](https://github.com/max1199880-bot/finance-fullstack-demo/actions/workflows/monitor.yml/badge.svg)](https://github.com/max1199880-bot/finance-fullstack-demo/actions/workflows/monitor.yml)
+
 Личный учёт денег: операции, бюджет, капитал, аналитика. Telegram Mini App и PWA.
 Это демо-версия действующего приложения: интерфейс продакшена **без изменений дизайна**,
 под ним — настоящий бэкенд (PostgreSQL + своё API + вход по паролю) на вымышленных данных.
 
-**Демо: https://finance-fullstack-demo.vercel.app** — кнопка «Посмотреть демо» открывает готовый аккаунт.
+**Демо: https://finance-fullstack-demo.vercel.app** — «Посмотреть демо» открывает готовый аккаунт,
+можно зарегистрироваться по почте или войти через Google.
 
-> Домашнее задание «Развертывание Backend и интеграция с Frontend».
-> Архитектура, развёртывание, описание API и процесс работы с AI —
-> в **[backend_documentation.md](backend_documentation.md)**.
-> Фронтенд этого приложения — ДЗ 4, репозиторий `finance-miniapp-demo`.
+| Документ | Что в нём |
+|---|---|
+| [integration_documentation.md](integration_documentation.md) | **ДЗ 6:** CI/CD, вход через Google, Яндекс.Метрика, мониторинг, логирование, оптимизация, работа с AI |
+| [security_audit.md](security_audit.md) | **ДЗ 6:** аудит безопасности — 29 находок, исправления, принятые риски |
+| [backend_documentation.md](backend_documentation.md) | **ДЗ 5:** архитектура бэкенда, модель данных, все эндпоинты API |
+
+Состояние на момент сдачи ДЗ 5 — тег [`dz5`](../../tree/dz5). Фронтенд этого приложения — ДЗ 4,
+репозиторий `finance-miniapp-demo`.
 
 | Вход | Главная | Бюджет | Капитал | Аналитика |
 |---|---|---|---|---|
@@ -23,7 +32,9 @@
 | API | Supabase Edge Function на Deno — 58 маршрутов, свой роутер |
 | База | PostgreSQL 17 · 11 таблиц · RLS на всех · SQL-функции для проводок |
 | Вход | Supabase Auth: почта и пароль, токены обновляются сами |
-| Тесты | Vitest: 39 интеграционных против живого бэкенда + 55 на экраны и логику |
+| Тесты | Vitest: 63 интеграционных против живого бэкенда (из них 16 — регрессии по аудиту) + 55 на экраны |
+| CI/CD | GitHub Actions: линтер, типы, тесты, Supabase в контейнере, деплой из main, мониторинг каждые 15 минут |
+| Интеграции | Вход через Google (OAuth2 + PKCE) · Яндекс.Метрика без персональных данных |
 
 ## Запуск
 
@@ -46,7 +57,9 @@ npm run dev
 | `npm run dev` | Дев-сервер фронтенда |
 | `npm run build` | Проверка типов и сборка в `dist/` |
 | `npm test` | 55 тестов: экраны и демо-сервер (Vitest + Testing Library) |
-| `npm run test:api` | 39 интеграционных тестов API против локального Supabase |
+| `npm run test:api` | 63 интеграционных теста API против локального Supabase |
+| `npm run lint` · `npm run format:check` | ESLint и Prettier — те же проверки, что в CI |
+| `node scripts/analyze-logs.mjs --local` | Разбор логов API через AI (см. документацию) |
 | `npm run seed:demo` | Пересоздать демо-аккаунт с вымышленными данными |
 | `npm run typecheck` | Проверка типов фронтенда |
 

@@ -12,7 +12,16 @@ import type { Category, DemoDb, IncomeSource, Transaction } from './types';
 const R = (rub: number): Kopecks => Math.round(rub * 100);
 
 // Стартовый набор категорий прода (порядок 0..7, emoji null — иконку подбирает приложение по имени).
-const EXPENSE = ['Продукты', 'Транспорт', 'Еда вне дома', 'Дом/связь', 'Развлечения', 'Покупки', 'Мед/спорт', 'Кредит'];
+const EXPENSE = [
+  'Продукты',
+  'Транспорт',
+  'Еда вне дома',
+  'Дом/связь',
+  'Развлечения',
+  'Покупки',
+  'Мед/спорт',
+  'Кредит',
+];
 const SOURCES = ['Зарплата', 'Подработка', 'Прочее'];
 
 const ids = {
@@ -70,9 +79,21 @@ const CREDIT = { originalAmount: R(250_000), rate: 16.9, termMonths: 36, payment
 
 export function createSeed(now: Date = new Date()): DemoDb {
   const categories: Category[] = [
-    ...EXPENSE.map((name, order) => ({ id: ids.cat(name), name, type: 'expense' as const, isActive: true, order, emoji: null })),
+    ...EXPENSE.map((name, order) => ({
+      id: ids.cat(name),
+      name,
+      type: 'expense' as const,
+      isActive: true,
+      order,
+      emoji: null,
+    })),
   ];
-  const incomeSources: IncomeSource[] = SOURCES.map((name) => ({ id: ids.src(name), name, emoji: null, isActive: true }));
+  const incomeSources: IncomeSource[] = SOURCES.map((name) => ({
+    id: ids.src(name),
+    name,
+    emoji: null,
+    isActive: true,
+  }));
 
   const firstMonth = new Date(now.getFullYear(), now.getMonth() - 5, 1);
   const creditStart = new Date(firstMonth.getFullYear(), firstMonth.getMonth(), CREDIT.paymentDay - 14);
@@ -97,7 +118,14 @@ export function createSeed(now: Date = new Date()): DemoDb {
       { id: ids.tinkoff, name: 'Тинькофф', type: 'bank', isActive: true },
       { id: ids.cash, name: 'Наличные', type: 'cash', isActive: true },
       { id: ids.invest, name: 'Инвестиции', type: 'investment', isActive: true },
-      { id: ids.car, name: 'Автомобиль', type: 'other_asset', isActive: true, purchasePrice: R(1_150_000), liability: false },
+      {
+        id: ids.car,
+        name: 'Автомобиль',
+        type: 'other_asset',
+        isActive: true,
+        purchasePrice: R(1_150_000),
+        liability: false,
+      },
       { id: ids.loan, name: 'Потребкредит', type: 'credit', isActive: true },
     ],
     snapshots: [],
@@ -118,7 +146,13 @@ export function createSeed(now: Date = new Date()): DemoDb {
   setBalance(db, ids.loan, CREDIT.originalAmount, creditStart.toISOString());
 
   const events: Array<{ at: Date; run: () => void }> = [];
-  const tx = (partial: Omit<Transaction, 'id' | 'categoryId' | 'incomeSourceId' | 'fromAccountId' | 'toAccountId' | 'comment'> & Partial<Transaction>): Transaction => ({
+  const tx = (
+    partial: Omit<
+      Transaction,
+      'id' | 'categoryId' | 'incomeSourceId' | 'fromAccountId' | 'toAccountId' | 'comment'
+    > &
+      Partial<Transaction>,
+  ): Transaction => ({
     categoryId: null,
     incomeSourceId: null,
     fromAccountId: null,
@@ -149,14 +183,42 @@ export function createSeed(now: Date = new Date()): DemoDb {
     ];
     for (const [day, src, rub, acc, comment] of income) {
       const d = at(day, 10);
-      if (past(d)) events.push({ at: d, run: () => book(tx({ date: d.toISOString(), type: 'income', amount: R(rub), incomeSourceId: ids.src(src), toAccountId: acc, comment: comment ?? null })) });
+      if (past(d))
+        events.push({
+          at: d,
+          run: () =>
+            book(
+              tx({
+                date: d.toISOString(),
+                type: 'income',
+                amount: R(rub),
+                incomeSourceId: ids.src(src),
+                toAccountId: acc,
+                comment: comment ?? null,
+              }),
+            ),
+        });
     }
 
     for (const [day, cat, rub, acc, comment] of MONTH_EXPENSES) {
       const d = at(day, 9 + (day % 11));
       // Аренда и связь не «плавают», остальное умножаем на коэффициент месяца.
       const amount = cat === 'Дом/связь' ? rub : Math.round(rub * factor);
-      if (past(d)) events.push({ at: d, run: () => book(tx({ date: d.toISOString(), type: 'expense', amount: R(amount), categoryId: ids.cat(cat), fromAccountId: acc, comment: comment ?? null })) });
+      if (past(d))
+        events.push({
+          at: d,
+          run: () =>
+            book(
+              tx({
+                date: d.toISOString(),
+                type: 'expense',
+                amount: R(amount),
+                categoryId: ids.cat(cat),
+                fromAccountId: acc,
+                comment: comment ?? null,
+              }),
+            ),
+        });
     }
 
     // Внутренние переводы: зарплата приходит на один счёт, а тратится с карты и наличными.
@@ -167,11 +229,39 @@ export function createSeed(now: Date = new Date()): DemoDb {
     ];
     for (const [day, to, rub, comment] of transfers) {
       const d = at(day, 18);
-      if (past(d)) events.push({ at: d, run: () => book(tx({ date: d.toISOString(), type: 'transfer_between_accounts', amount: R(rub), fromAccountId: ids.sber, toAccountId: to, comment })) });
+      if (past(d))
+        events.push({
+          at: d,
+          run: () =>
+            book(
+              tx({
+                date: d.toISOString(),
+                type: 'transfer_between_accounts',
+                amount: R(rub),
+                fromAccountId: ids.sber,
+                toAccountId: to,
+                comment,
+              }),
+            ),
+        });
     }
 
     const invest = at(6, 12);
-    if (past(invest)) events.push({ at: invest, run: () => book(tx({ date: invest.toISOString(), type: 'transfer_to_investment', amount: R(10_000), fromAccountId: ids.sber, toAccountId: ids.invest, comment: 'Пополнение брокерского счёта' })) });
+    if (past(invest))
+      events.push({
+        at: invest,
+        run: () =>
+          book(
+            tx({
+              date: invest.toISOString(),
+              type: 'transfer_to_investment',
+              amount: R(10_000),
+              fromAccountId: ids.sber,
+              toAccountId: ids.invest,
+              comment: 'Пополнение брокерского счёта',
+            }),
+          ),
+      });
 
     // Платёж по кредиту — через ту же раскладку «проценты / тело», что и в проде.
     const pay = at(CREDIT.paymentDay, 11);
@@ -182,7 +272,19 @@ export function createSeed(now: Date = new Date()): DemoDb {
           const debt = balanceOf(db, ids.loan);
           const amount = annuity(CREDIT.originalAmount, CREDIT.rate, CREDIT.termMonths);
           const { interest, principal } = splitPayment(debt, CREDIT.rate, amount);
-          book(tx({ date: pay.toISOString(), type: 'expense', amount, categoryId: ids.cat('Кредит'), fromAccountId: ids.sber, toAccountId: ids.loan, principalPart: principal, interestPart: interest, comment: 'Платёж по кредиту: Потребкредит' }));
+          book(
+            tx({
+              date: pay.toISOString(),
+              type: 'expense',
+              amount,
+              categoryId: ids.cat('Кредит'),
+              fromAccountId: ids.sber,
+              toAccountId: ids.loan,
+              principalPart: principal,
+              interestPart: interest,
+              comment: 'Платёж по кредиту: Потребкредит',
+            }),
+          );
         },
       });
     }
@@ -196,7 +298,15 @@ export function createSeed(now: Date = new Date()): DemoDb {
       const prev = balanceOf(db, ids.car);
       const next = R(1_070_000);
       setBalance(db, ids.car, next, reval.toISOString());
-      book(tx({ date: reval.toISOString(), type: 'asset_revaluation', amount: prev - next, fromAccountId: ids.car, comment: 'Переоценка: Автомобиль' }));
+      book(
+        tx({
+          date: reval.toISOString(),
+          type: 'asset_revaluation',
+          amount: prev - next,
+          fromAccountId: ids.car,
+          comment: 'Переоценка: Автомобиль',
+        }),
+      );
     },
   });
 
@@ -204,7 +314,11 @@ export function createSeed(now: Date = new Date()): DemoDb {
 
   // Бюджет текущего месяца: лимиты по категориям + глобальные планы доходов и инвестиций.
   const month = monthKey(now);
-  db.categoryPlans = Object.entries(PLANS_RUB).map(([name, rub]) => ({ month, categoryId: ids.cat(name), amount: R(rub) }));
+  db.categoryPlans = Object.entries(PLANS_RUB).map(([name, rub]) => ({
+    month,
+    categoryId: ids.cat(name),
+    amount: R(rub),
+  }));
   db.globalPlans = [{ month, plannedTotalIncome: R(100_000), plannedInvestments: R(10_000) }];
 
   return db;

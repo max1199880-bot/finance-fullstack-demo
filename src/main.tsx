@@ -9,6 +9,10 @@ import { App } from './App';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { registerMutationDefaults } from './lib/mutationDefaults';
 import { IconThemeProvider } from './lib/iconTheme';
+import { API_BASE } from './lib/api';
+import { initAnalytics } from './lib/analytics';
+import { initErrorReporting } from './lib/errorReporting';
+import { bindCacheToSession } from './lib/session';
 import './index.css';
 
 const queryClient = new QueryClient({
@@ -61,49 +65,54 @@ const persister = createSyncStoragePersister({
   throttleTime: 1000,
 });
 
+// Кеш данных живёт ровно столько, сколько сессия пользователя (см. lib/session.ts).
+bindCacheToSession(queryClient, persister);
+initErrorReporting(API_BASE);
+initAnalytics();
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
       <PersistQueryClientProvider
-      client={queryClient}
-      persistOptions={{
-        persister,
-        maxAge: 1000 * 60 * 60 * 24 * 7,
-        // Bump this when the JS bundle's data shape diverges from older
-        // persisted snapshots. Mismatches cause "white screen" crashes
-        // because React tries to render new components against old data.
-        buster: 'v6-2026-06-04-vm',
-        // Persist both queries AND mutations. The default does both, but
-        // we name it explicitly so it's clear that paused mutations survive.
-        dehydrateOptions: {
-          shouldDehydrateMutation: () => true,
-          shouldDehydrateQuery: () => true,
-        },
-      }}
-      onSuccess={() => {
-        // Purge stale pending mutations from a previous session.
-        // Any mutation still in 'pending' status after more than 5 minutes
-        // (or with no timestamp at all) will never complete — it's a ghost
-        // left by a crashed/closed session. We remove it BEFORE resuming so
-        // the OfflineBanner never shows "Отправляю…" for dead writes.
-        // Note: we check status === 'pending', NOT isPaused, because a mutation
-        // can be pending with isPaused: false when it was executing at the time
-        // the app was closed and its state was serialised to localStorage.
-        const mc = queryClient.getMutationCache();
-        const FIVE_MIN = 5 * 60 * 1000;
-        const now = Date.now();
-        mc.getAll().forEach((m) => {
-          if (m.state.status !== 'pending') return;
-          const submittedAt = (m.state as { submittedAt?: number }).submittedAt ?? 0;
-          // Remove if: no timestamp (legacy / corrupted) OR older than 5 min.
-          if (submittedAt === 0 || now - submittedAt > FIVE_MIN) {
-            mc.remove(m);
-          }
-        });
-        // Resume only the fresh paused mutations that survived the purge.
-        queryClient.resumePausedMutations();
-      }}
-    >
+        client={queryClient}
+        persistOptions={{
+          persister,
+          maxAge: 1000 * 60 * 60 * 24 * 7,
+          // Bump this when the JS bundle's data shape diverges from older
+          // persisted snapshots. Mismatches cause "white screen" crashes
+          // because React tries to render new components against old data.
+          buster: 'v6-2026-06-04-vm',
+          // Persist both queries AND mutations. The default does both, but
+          // we name it explicitly so it's clear that paused mutations survive.
+          dehydrateOptions: {
+            shouldDehydrateMutation: () => true,
+            shouldDehydrateQuery: () => true,
+          },
+        }}
+        onSuccess={() => {
+          // Purge stale pending mutations from a previous session.
+          // Any mutation still in 'pending' status after more than 5 minutes
+          // (or with no timestamp at all) will never complete — it's a ghost
+          // left by a crashed/closed session. We remove it BEFORE resuming so
+          // the OfflineBanner never shows "Отправляю…" for dead writes.
+          // Note: we check status === 'pending', NOT isPaused, because a mutation
+          // can be pending with isPaused: false when it was executing at the time
+          // the app was closed and its state was serialised to localStorage.
+          const mc = queryClient.getMutationCache();
+          const FIVE_MIN = 5 * 60 * 1000;
+          const now = Date.now();
+          mc.getAll().forEach((m) => {
+            if (m.state.status !== 'pending') return;
+            const submittedAt = (m.state as { submittedAt?: number }).submittedAt ?? 0;
+            // Remove if: no timestamp (legacy / corrupted) OR older than 5 min.
+            if (submittedAt === 0 || now - submittedAt > FIVE_MIN) {
+              mc.remove(m);
+            }
+          });
+          // Resume only the fresh paused mutations that survived the purge.
+          queryClient.resumePausedMutations();
+        }}
+      >
         <IconThemeProvider>
           <App />
         </IconThemeProvider>

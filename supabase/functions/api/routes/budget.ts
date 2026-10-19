@@ -95,8 +95,12 @@ async function budgetDTO(ctx: Ctx) {
   const [cats, plans, tx, totals] = await Promise.all([
     ctx.db.from('categories').select('id, name').eq('type', 'expense').eq('is_active', true),
     ctx.db.from('budget_plan_month').select('category_id, planned_amount').eq('month', month),
-    ctx.db.from('transactions').select('amount, category_id').eq('type', 'expense')
-      .gte('date', from.toISOString()).lt('date', to.toISOString()),
+    ctx.db
+      .from('transactions')
+      .select('amount, category_id')
+      .eq('type', 'expense')
+      .gte('date', from.toISOString())
+      .lt('date', to.toISOString()),
     // Планы месяца и суммы по доходам с инвестициями считает общая сводка —
     // чтобы бюджет и главная не разошлись в цифрах.
     monthTotals(ctx, month),
@@ -163,9 +167,10 @@ export const routes: Route[] = [
 
       // Горизонт ограничен тремя годами: дальше планы всё равно не живут,
       // а запрос перестаёт быть дешёвым.
-      const extra = typeof body.propagateMonths === 'number' && Number.isFinite(body.propagateMonths)
-        ? Math.min(36, Math.max(0, Math.trunc(body.propagateMonths)))
-        : 11;
+      const extra =
+        typeof body.propagateMonths === 'number' && Number.isFinite(body.propagateMonths)
+          ? Math.min(36, Math.max(0, Math.trunc(body.propagateMonths)))
+          : 11;
       const onlyEmpty = body.onlyEmpty !== false;
       const months = Array.from({ length: extra + 1 }, (_, i) => addMonths(start, i));
 
@@ -212,19 +217,12 @@ export const routes: Route[] = [
 
       // Правим поля по отдельности: в строке месяца три независимых плана,
       // и запись одного не должна стирать два других.
-      const existing = await ctx.db
-        .from('budget_plan_global')
-        .select('id')
-        .eq('month', month)
-        .maybeSingle();
+      const existing = await ctx.db.from('budget_plan_global').select('id').eq('month', month).maybeSingle();
       if (existing.error) throw new Error(existing.error.message);
 
       if (existing.data) {
         if (Object.keys(patch).length) {
-          const { error } = await ctx.db
-            .from('budget_plan_global')
-            .update(patch)
-            .eq('id', existing.data.id);
+          const { error } = await ctx.db.from('budget_plan_global').update(patch).eq('id', existing.data.id);
           if (error) throw new Error(error.message);
         }
       } else {

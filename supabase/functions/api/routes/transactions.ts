@@ -31,11 +31,20 @@ const LOSS_CATEGORY = 'Убыток';
 // Значения перечислений базы. Нужны, чтобы мусор из query не доходил до Postgres:
 // неизвестное значение enum там даёт ошибку запроса, а приложение ждёт пустой список.
 const TX_TYPES: readonly TxType[] = [
-  'income', 'expense', 'transfer_to_investment',
-  'transfer_between_accounts', 'credit_payment', 'asset_revaluation',
+  'income',
+  'expense',
+  'transfer_to_investment',
+  'transfer_between_accounts',
+  'credit_payment',
+  'asset_revaluation',
 ];
 const ACCOUNT_TYPES: readonly AccountType[] = [
-  'cash', 'bank', 'investment', 'other_asset', 'credit', 'credit_buffer',
+  'cash',
+  'bank',
+  'investment',
+  'other_asset',
+  'credit',
+  'credit_buffer',
 ];
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -75,15 +84,18 @@ function dateParam(url: URL, key: string): string | null {
 async function requireExpenseCategory(ctx: Ctx, id: string): Promise<void> {
   if (!UUID.test(id)) throw notFound('Category not found');
   const { data, error } = await ctx.db
-    .from('categories').select('id').eq('id', id).eq('type', 'expense').maybeSingle();
+    .from('categories')
+    .select('id')
+    .eq('id', id)
+    .eq('type', 'expense')
+    .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw notFound('Category not found');
 }
 
 async function requireSource(ctx: Ctx, id: string): Promise<void> {
   if (!UUID.test(id)) throw notFound('Source not found');
-  const { data, error } = await ctx.db
-    .from('income_sources').select('id').eq('id', id).maybeSingle();
+  const { data, error } = await ctx.db.from('income_sources').select('id').eq('id', id).maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw notFound('Source not found');
 }
@@ -100,8 +112,7 @@ async function requireAsset(ctx: Ctx, id: string): Promise<void> {
 /** Операция пользователя по id. Чужие строки отсекает RLS, поэтому пусто = «нет такой». */
 async function requireTx(ctx: Ctx, id: string): Promise<TxRow> {
   if (!UUID.test(id)) throw notFound('Transaction not found');
-  const { data, error } = await ctx.db
-    .from('transactions').select(TX_FIELDS).eq('id', id).maybeSingle();
+  const { data, error } = await ctx.db.from('transactions').select(TX_FIELDS).eq('id', id).maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw notFound('Transaction not found');
   return asTxRow(data);
@@ -171,18 +182,18 @@ function applyEffects(deltas: Deltas, tx: TxRow, sign: 1 | -1): void {
  * старая, — иначе график капитала задним числом менял бы форму.
  */
 async function shiftBalances(ctx: Ctx, deltas: Deltas, date: string): Promise<void> {
-  const rows: { account_id: string; date: string; balance: string }[] = [];
   for (const [accountId, delta] of deltas) {
     if (delta === 0) continue;
-    // Текущий остаток берём той же функцией базы, что и проводка: у неё одно правило
-    // выбора последней точки истории, и расхождений на одинаковых датах не возникает.
-    const { data, error } = await ctx.db.rpc('account_balance', { p_account_id: accountId });
+    // Сдвиг делает функция базы: она блокирует счёт на время чтения и записи.
+    // Прочитать остаток здесь и записать отдельным запросом нельзя — параллельный
+    // запрос успел бы вклиниться между ними, и одно из изменений потерялось бы.
+    const { error } = await ctx.db.rpc('bump_balance', {
+      p_account_id: accountId,
+      p_delta: toDb(delta),
+      p_date: date,
+    });
     if (error) throw new Error(error.message);
-    rows.push({ account_id: accountId, date, balance: toDb(fromDb(data) + delta) });
   }
-  if (!rows.length) return;
-  const { error } = await ctx.db.from('account_balances').insert(rows);
-  if (error) throw new Error(error.message);
 }
 
 /** Категория «Убыток»: ищем свою, при отсутствии создаём — пользователь её не заводит руками. */

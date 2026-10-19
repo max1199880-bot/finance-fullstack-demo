@@ -133,11 +133,7 @@ export function CategoryQuickEdit({
                 setView('rename');
               }}
             />
-            <ActionRow
-              icon="😀"
-              label="Сменить эмодзи"
-              onClick={() => setView('emoji')}
-            />
+            <ActionRow icon="😀" label="Сменить эмодзи" onClick={() => setView('emoji')} />
             <ActionRow icon="🗑" label="Удалить" danger onClick={confirmDelete} />
           </div>
         )}
@@ -179,13 +175,7 @@ export function CategoryQuickEdit({
  * Sheet for adding a brand-new expense category. Pops in from the "+ Добавить"
  * tile in the picker.
  */
-export function AddCategorySheet({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
+export function AddCategorySheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const qc = useQueryClient();
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState<string | null>(null);
@@ -200,8 +190,7 @@ export function AddCategorySheet({
   }, [open]);
 
   const m = useMutation({
-    mutationFn: () =>
-      api.createCategory({ name: name.trim(), type: 'expense', emoji: emoji ?? undefined }),
+    mutationFn: () => api.createCategory({ name: name.trim(), type: 'expense', emoji: emoji ?? undefined }),
     onSuccess: async () => {
       haptic('success');
       await qc.invalidateQueries({ queryKey: ['cats'] });

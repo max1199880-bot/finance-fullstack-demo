@@ -18,7 +18,10 @@ export function BudgetPage() {
     staleTime: 15_000,
   });
 
-  const [editing, setEditing] = useState<{ kind: 'category' | 'global_expense' | 'global_income' | 'investments'; row?: BudgetCategoryRow } | null>(null);
+  const [editing, setEditing] = useState<{
+    kind: 'category' | 'global_expense' | 'global_income' | 'investments';
+    row?: BudgetCategoryRow;
+  } | null>(null);
 
   if (budget.isLoading || !budget.data)
     return (
@@ -43,12 +46,8 @@ export function BudgetPage() {
         >
           <div className="text-sm text-ios-hint">Расход за {fmtMonth(b.month)}</div>
           <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-3xl font-rounded font-bold tabular-nums">
-              {fmtRub(b.total.actual)}
-            </span>
-            <span className="text-ios-hint tabular-nums">
-              из {fmtRub(b.total.planned)}
-            </span>
+            <span className="text-3xl font-rounded font-bold tabular-nums">{fmtRub(b.total.actual)}</span>
+            <span className="text-ios-hint tabular-nums">из {fmtRub(b.total.planned)}</span>
           </div>
           <div className="mt-3">
             <ProgressBar percent={b.total.percent} status={b.total.status} />
@@ -119,13 +118,13 @@ export function BudgetPage() {
                     )}
                   </div>
                 </div>
-                {b.plannedIncome ? (() => {
-                  const pct = Math.round(
-                    (parseFloat(b.totalIncome) / parseFloat(b.plannedIncome)) * 100,
-                  );
-                  const status: FactStatus = pct >= 100 ? 'ok' : pct >= 50 ? 'warning' : 'no_plan';
-                  return <ProgressBar percent={pct} status={status} />;
-                })() : (
+                {b.plannedIncome ? (
+                  (() => {
+                    const pct = Math.round((parseFloat(b.totalIncome) / parseFloat(b.plannedIncome)) * 100);
+                    const status: FactStatus = pct >= 100 ? 'ok' : pct >= 50 ? 'warning' : 'no_plan';
+                    return <ProgressBar percent={pct} status={status} />;
+                  })()
+                ) : (
                   <div className="text-[11px] text-ios-hint">план не задан</div>
                 )}
               </div>
@@ -148,13 +147,15 @@ export function BudgetPage() {
                     )}
                   </div>
                 </div>
-                {b.plannedInvestments ? (() => {
-                  const pct = Math.round(
-                    (parseFloat(b.totalInvestments) / parseFloat(b.plannedInvestments)) * 100,
-                  );
-                  const status: FactStatus = pct >= 100 ? 'ok' : 'warning';
-                  return <ProgressBar percent={pct} status={status} />;
-                })() : (
+                {b.plannedInvestments ? (
+                  (() => {
+                    const pct = Math.round(
+                      (parseFloat(b.totalInvestments) / parseFloat(b.plannedInvestments)) * 100,
+                    );
+                    const status: FactStatus = pct >= 100 ? 'ok' : 'warning';
+                    return <ProgressBar percent={pct} status={status} />;
+                  })()
+                ) : (
                   <div className="text-[11px] text-ios-hint">план не задан</div>
                 )}
               </div>
@@ -163,12 +164,7 @@ export function BudgetPage() {
         </Card>
       </div>
 
-      <PlanEditor
-        open={!!editing}
-        onClose={() => setEditing(null)}
-        editing={editing}
-        month={b.month}
-      />
+      <PlanEditor open={!!editing} onClose={() => setEditing(null)} editing={editing} month={b.month} />
     </div>
   );
 }
@@ -181,7 +177,10 @@ function PlanEditor({
 }: {
   open: boolean;
   onClose: () => void;
-  editing: { kind: 'category' | 'global_expense' | 'global_income' | 'investments'; row?: BudgetCategoryRow } | null;
+  editing: {
+    kind: 'category' | 'global_expense' | 'global_income' | 'investments';
+    row?: BudgetCategoryRow;
+  } | null;
   month: string;
 }) {
   const qc = useQueryClient();
@@ -236,7 +235,9 @@ function PlanEditor({
 
   const initial =
     editing.kind === 'category'
-      ? (editing.row?.planned && editing.row.planned !== '0' ? editing.row.planned : '')
+      ? editing.row?.planned && editing.row.planned !== '0'
+        ? editing.row.planned
+        : ''
       : '';
 
   const submit = (v: string) => {
@@ -260,9 +261,7 @@ function PlanEditor({
             <div className="text-left">
               <div className="text-sm font-medium">Применить к следующим месяцам</div>
               <div className="text-xs text-ios-hint mt-0.5">
-                {propagate
-                  ? 'будет проставлен на 12 месяцев вперёд там, где плана нет'
-                  : 'только этот месяц'}
+                {propagate ? 'будет проставлен на 12 месяцев вперёд там, где плана нет' : 'только этот месяц'}
               </div>
             </div>
             <span

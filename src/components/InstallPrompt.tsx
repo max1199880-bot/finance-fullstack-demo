@@ -91,8 +91,8 @@ export function InstallPrompt() {
     return (
       <Banner onDismiss={dismiss}>
         <div className="flex-1 text-xs leading-snug">
-          <span className="font-semibold">Установить на iPhone:</span> нажми{' '}
-          <span aria-hidden>⎙</span> «Поделиться» → «На экран „Домой“».
+          <span className="font-semibold">Установить на iPhone:</span> нажми <span aria-hidden>⎙</span>{' '}
+          «Поделиться» → «На экран „Домой“».
         </div>
       </Banner>
     );

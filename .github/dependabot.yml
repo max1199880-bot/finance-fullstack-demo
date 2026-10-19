@@ -1,0 +1,16 @@
+# Обновления зависимостей пул-реквестами: каждый пройдёт тот же CI, что и обычный код.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # Мелкие обновления одним PR, чтобы не тонуть в десятке однострочных.
+      minor-and-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

@@ -9,8 +9,12 @@ export function fmtRub(v: string | number, opts: { signed?: boolean; compact?: b
   if (opts.compact && abs >= 1_000_000) return `${(abs / 1_000_000).toFixed(abs >= 10_000_000 ? 1 : 2)}М ₽`;
   if (opts.compact && abs >= 100_000) return `${Math.round(abs / 1000)}К ₽`;
 
-  const intPart = Math.trunc(abs).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  const fracPart = (Math.round((abs - Math.trunc(abs)) * 100)).toString().padStart(2, '0');
+  const intPart = Math.trunc(abs)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  const fracPart = Math.round((abs - Math.trunc(abs)) * 100)
+    .toString()
+    .padStart(2, '0');
   const tail = fracPart === '00' ? '' : `,${fracPart}`;
   const sign = negative ? '−' : opts.signed ? '+' : '';
   return `${sign}${intPart}${tail} ₽`;
@@ -24,9 +28,11 @@ export function fmtMonth(month: string): string {
 
 export function fmtDate(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }) +
+  return (
+    d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }) +
     ' ' +
-    d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+  );
 }
 
 /** Local day key (year-month-day) for grouping transactions into day sections. */
@@ -72,19 +78,19 @@ export function categoryEmoji(name: string, custom?: string | null): string {
   if (isIconRef(custom)) return ICON_EMOJI[iconRefKey(custom as string)];
   if (custom && custom.trim().length > 0) return custom;
   const map: Record<string, string> = {
-    'Продукты': '🛒',
+    Продукты: '🛒',
     'Еда вне дома': '🍽',
-    'Транспорт': '🚗',
+    Транспорт: '🚗',
     'Дом/связь': '🏠',
-    'Развлечения': '🎬',
-    'Покупки': '🛍',
-    'Кредит': '💳',
+    Развлечения: '🎬',
+    Покупки: '🛍',
+    Кредит: '💳',
     'Мед/спорт': '🏋️',
-    'Девушки': '🌹',
+    Девушки: '🌹',
     'Ремонт/инструменты': '🔧',
-    'Зарплата': '💰',
-    'Подработка': '💼',
-    'Прочее': '✨',
+    Зарплата: '💰',
+    Подработка: '💼',
+    Прочее: '✨',
   };
   return map[name] ?? '•';
 }

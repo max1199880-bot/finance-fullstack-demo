@@ -219,7 +219,7 @@ PostgREST своим токеном, и не может записать опе�
 ```bash
 curl -s "$SUPABASE_URL/auth/v1/token?grant_type=password" \
   -H "apikey: $ANON_KEY" -H "Content-Type: application/json" \
-  -d '{"email":"demo@finance-demo.app","password":"demo-password"}'
+  -d '{"email":"demo@example.com","password":"demo-password"}'
 # → {"access_token":"eyJ...","refresh_token":"...","user":{...}}
 ```
 

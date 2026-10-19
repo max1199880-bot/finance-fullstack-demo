@@ -1,0 +1,204 @@
+# CI/CD: проверка каждого пуша и деплой из main.
+#
+#   quality ──┐
+#             ├──► deploy (только push в main): миграции → функция → фронтенд → проверка прода
+#   api-tests ┘
+#
+# Деплой стоит за обоими проверочными этапами: красный линтер или упавший тест API
+# не дают коду попасть на прод. Автодеплой Vercel из git выключен (vercel.json),
+# поэтому других путей на прод нет.
+#
+# Сторонние actions закреплены по SHA, а CLI — точными версиями: деплой держит
+# прод-токены, и перевешенный тег или свежий скомпрометированный релиз не должен
+# получить к ним доступ. Обновляет закрепления Dependabot — через тот же CI.
+
+name: CI/CD
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+# Новый пуш в ту же ветку отменяет недоделанный прогон, но не деплой:
+# прерванная посередине выкладка оставила бы базу и функцию разных версий.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+env:
+  # 22, не 20: supabase-js в скриптах и тестах требует встроенный WebSocket, он есть с Node 22.
+  NODE_VERSION: '22'
+  DENO_VERSION: '2.x'
+
+jobs:
+  quality:
+    name: Линтер, типы, юнит-тесты, сборка
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Prettier — форматирование
+        run: npm run format:check
+
+      - name: TypeScript — фронтенд
+        run: npm run typecheck
+
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: ${{ env.DENO_VERSION }}
+
+      - name: Deno — типы и линтер функции API
+        working-directory: supabase/functions/api
+        run: |
+          deno check index.ts
+          deno lint
+
+      - name: Юнит-тесты и тесты экранов
+        run: npm test
+
+      - name: Сборка
+        run: npm run build
+        env:
+          # Для сборки нужны только адрес и публичный ключ — подставляем заглушки:
+          # этот артефакт никуда не выкладывается, прод собирается в deploy.
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-placeholder
+
+  api-tests:
+    name: Тесты API на живом Supabase
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1
+        with:
+          version: 2.121.0
+
+      # Поднимаем ровно то, что нужно тестам: базу, Auth, шлюз и рантайм функций.
+      # Studio, хранилище и аналитика только удлинили бы прогон.
+      - name: Supabase — база, Auth, миграции
+        run: supabase start -x studio,imgproxy,storage-api,realtime,logflare,vector,supavisor,postgres-meta,mailpit
+
+      # Ключи одноразового стенда в контейнере раннера: к проду они отношения не имеют,
+      # но в лог всё равно не пишем — маскируем, как настоящие секреты.
+      - name: Ключи локального стенда
+        run: |
+          supabase status -o json > status.json
+          for key in ANON_KEY SERVICE_ROLE_KEY; do echo "::add-mask::$(jq -r ".$key" status.json)"; done
+          {
+            echo "SUPABASE_URL=$(jq -r .API_URL status.json)"
+            echo "SUPABASE_ANON_KEY=$(jq -r .ANON_KEY status.json)"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$(jq -r .SERVICE_ROLE_KEY status.json)"
+          } >> "$GITHUB_ENV"
+          rm status.json
+
+      - name: Функция API
+        run: |
+          printf 'ALLOWED_ORIGINS=http://localhost:5173\n' > supabase/functions/.env
+          supabase functions serve --env-file supabase/functions/.env > functions.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf "$SUPABASE_URL/functions/v1/api/health" > /dev/null && exit 0
+            sleep 2
+          done
+          echo "Функция не поднялась за 2 минуты"; cat functions.log; exit 1
+
+      - name: Демо-данные
+        run: npm run seed:demo
+
+      - name: Интеграционные тесты API
+        run: npm run test:api
+
+      - name: Логи функции (при падении)
+        if: failure()
+        run: cat functions.log
+
+  deploy:
+    name: Деплой на прод
+    needs: [quality, api-tests]
+    # DEPLOY_ENABLED — переменная репозитория: деплой включается, когда в окружении
+    # production заданы секреты. Без неё джоба пропускается, а не падает на пустых токенах.
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: https://finance-fullstack-demo.vercel.app
+    # Здесь только несекретные идентификаторы. Токены выдаются каждому шагу отдельно:
+    # шагу Vercel не нужен доступ к базе, а шагам Supabase — к хостингу.
+    env:
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1
+        with:
+          version: 2.121.0
+
+      # Сначала база: новая версия функции может рассчитывать на новые столбцы,
+      # а старая версия переживёт добавленные — миграции у нас только добавляющие.
+      - name: Миграции базы
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          supabase link --project-ref "$SUPABASE_PROJECT_REF"
+          supabase db push
+
+      - name: Функция API
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          # Версия выкладки попадает в /health — по ней видно, какой коммит на проде.
+          supabase secrets set APP_VERSION="${GITHUB_SHA::7}" --project-ref "$SUPABASE_PROJECT_REF"
+          supabase functions deploy api --project-ref "$SUPABASE_PROJECT_REF"
+
+      - name: Фронтенд на Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          npm i -g vercel@64.5.0
+          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          vercel build --prod --token="$VERCEL_TOKEN"
+          vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+
+      # Деплой считается успешным, только если прод действительно отвечает.
+      - name: Проверка прода после выкладки
+        run: |
+          for i in $(seq 1 10); do
+            if curl -sf "https://$SUPABASE_PROJECT_REF.supabase.co/functions/v1/api/health" | grep -q '"status":"ok"' \
+               && curl -sf -o /dev/null https://finance-fullstack-demo.vercel.app/; then
+              echo "Прод отвечает"; exit 0
+            fi
+            sleep 6
+          done
+          echo "Прод не отвечает после выкладки"; exit 1

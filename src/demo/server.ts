@@ -29,7 +29,9 @@ function readOptions(): DemoOptions {
   }
   const q = new URLSearchParams(window.location.search);
   const next: DemoOptions = {
-    latencyMs: q.has('latency') ? Math.max(0, Number(q.get('latency')) || 0) : (saved.latencyMs ?? defaults.latencyMs),
+    latencyMs: q.has('latency')
+      ? Math.max(0, Number(q.get('latency')) || 0)
+      : (saved.latencyMs ?? defaults.latencyMs),
     fail: q.has('fail') ? q.get('fail') === '1' : (saved.fail ?? defaults.fail),
   };
   try {
@@ -44,7 +46,12 @@ function readOptions(): DemoOptions {
  * Обработать один запрос к API. Вынесено из перехватчика, чтобы тесты вызывали
  * сервер напрямую — без window и без задержек.
  */
-export async function handleApiRequest(store: DemoStore, method: string, url: URL, rawBody: unknown): Promise<Response> {
+export async function handleApiRequest(
+  store: DemoStore,
+  method: string,
+  url: URL,
+  rawBody: unknown,
+): Promise<Response> {
   let body: unknown = undefined;
   if (typeof rawBody === 'string' && rawBody.length > 0) {
     try {
@@ -75,8 +82,12 @@ export function installDemoServer(): DemoStore {
 
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url, window.location.origin);
-    if (url.origin !== window.location.origin || !url.pathname.startsWith('/api/')) return realFetch(input, init);
+    const url = new URL(
+      typeof input === 'string' ? input : input instanceof URL ? input.href : input.url,
+      window.location.origin,
+    );
+    if (url.origin !== window.location.origin || !url.pathname.startsWith('/api/'))
+      return realFetch(input, init);
 
     const method = init?.method ?? (input instanceof Request ? input.method : 'GET');
     // Настоящий офлайн (DevTools → Offline, авиарежим): демо-сервер «недоступен», как и реальный.

@@ -1,10 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import {
-  CATEGORY_GLYPHS,
-  CATEGORY_COLORS,
-  categoryIconKey,
-  type CategoryIconKey,
-} from './categoryIcons';
+import { CATEGORY_GLYPHS, CATEGORY_COLORS, categoryIconKey, type CategoryIconKey } from './categoryIcons';
 import { categoryEmoji } from './format';
 
 // Two independent choices, both persisted on the device:
@@ -160,7 +155,9 @@ export function CategoryIcon({
 
   if (t === 'solid') {
     return (
-      <span style={{ ...box, background: color, borderRadius: '50%', boxShadow: '0 3px 8px rgba(0,0,0,0.18)' }}>
+      <span
+        style={{ ...box, background: color, borderRadius: '50%', boxShadow: '0 3px 8px rgba(0,0,0,0.18)' }}
+      >
         <span style={svgStyle}>
           <Glyph d={d} stroke="#fff" />
         </span>
@@ -169,7 +166,9 @@ export function CategoryIcon({
   }
   if (t === 'soft') {
     return (
-      <span style={{ ...box, background: hexAlpha(color, 0.16), borderRadius: Math.round(size * 0.3), color }}>
+      <span
+        style={{ ...box, background: hexAlpha(color, 0.16), borderRadius: Math.round(size * 0.3), color }}
+      >
         <span style={svgStyle}>
           <Glyph d={d} stroke={color} />
         </span>

@@ -4,7 +4,15 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Text', 'Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'],
+        sans: [
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'SF Pro Text',
+          'Helvetica Neue',
+          'Helvetica',
+          'Arial',
+          'sans-serif',
+        ],
         rounded: ['SF Pro Rounded', '-apple-system', 'BlinkMacSystemFont', 'SF Pro Text', 'sans-serif'],
         mono: ['SF Mono', 'ui-monospace', 'Menlo', 'monospace'],
       },
@@ -26,7 +34,7 @@ export default {
         },
       },
       borderRadius: {
-        'ios': '14px',
+        ios: '14px',
         'ios-lg': '20px',
       },
       boxShadow: {

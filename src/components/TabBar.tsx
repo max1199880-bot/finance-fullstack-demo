@@ -45,7 +45,9 @@ export function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) =
                     <span className={`transition-colors ${isActive ? 'text-ios-accent' : 'text-ios-hint'}`}>
                       <AppIcon name={t.icon} size={25} />
                     </span>
-                    <span className={`mt-0.5 text-[10px] font-medium ${isActive ? 'text-ios-accent' : 'text-ios-hint'}`}>
+                    <span
+                      className={`mt-0.5 text-[10px] font-medium ${isActive ? 'text-ios-accent' : 'text-ios-hint'}`}
+                    >
                       {t.label}
                     </span>
                   </>

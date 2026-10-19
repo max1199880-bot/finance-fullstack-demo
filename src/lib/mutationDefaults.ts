@@ -1,4 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query';
+import { GOALS, trackGoal, type GoalLabel } from './analytics';
 import { api } from './api';
 
 /**
@@ -162,8 +163,15 @@ export function registerMutationDefaults(qc: QueryClient): void {
     qc.invalidateQueries({ queryKey: ['asset-investments'] });
   };
 
+  // Цели аналитики — только после успеха и только тип действия: сумма, категория
+  // и комментарий в Метрику не уходят (см. lib/analytics.ts).
   qc.setMutationDefaults(MUTATION_KEYS.addTx, {
     mutationFn: runAddTx,
+    onSuccess: (_data: unknown, v: AddTxVariables) => {
+      if (v.kind === 'credit_payment') trackGoal(GOALS.creditPayment);
+      else if (v.kind === 'purchase') trackGoal(GOALS.assetPurchase, { type: v.assetType as GoalLabel });
+      else trackGoal(GOALS.txCreate, { type: (v.kind === 'transfer' ? v.type : v.kind) as GoalLabel });
+    },
     onSettled: invalidateAll,
   });
 
@@ -174,11 +182,13 @@ export function registerMutationDefaults(qc: QueryClient): void {
 
   qc.setMutationDefaults(MUTATION_KEYS.updateTx, {
     mutationFn: (v: UpdateTxVariables) => api.updateTransaction(v.id, v.patch),
+    onSuccess: () => trackGoal(GOALS.txEdit),
     onSettled: invalidateAll,
   });
 
   qc.setMutationDefaults(MUTATION_KEYS.deleteTx, {
     mutationFn: (v: DeleteTxVariables) => api.deleteTransaction(v.id),
+    onSuccess: () => trackGoal(GOALS.txDelete),
     onSettled: invalidateAll,
   });
 }

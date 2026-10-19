@@ -45,7 +45,13 @@ describe('planFact: пороги сервера прода (≤90 ok, ≤110 war
   });
 
   it('без плана — no_plan и percent null; delta = факт − план', () => {
-    expect(planFact(0, 5_000)).toEqual({ planned: '0', actual: '50', delta: '50', percent: null, status: 'no_plan' });
+    expect(planFact(0, 5_000)).toEqual({
+      planned: '0',
+      actual: '50',
+      delta: '50',
+      percent: null,
+      status: 'no_plan',
+    });
     expect(planFact(10_000, 12_500).delta).toBe('25');
   });
 });
@@ -61,8 +67,16 @@ describe('кредит', () => {
   });
 
   it('раскладка платежа: проценты, тело, переплата сверх долга', () => {
-    expect(splitPayment(1_200_000, 12, 100_000)).toEqual({ interest: 12_000, principal: 88_000, overpayment: 0 });
-    expect(splitPayment(50_000, 12, 100_000)).toEqual({ interest: 500, principal: 50_000, overpayment: 49_500 });
+    expect(splitPayment(1_200_000, 12, 100_000)).toEqual({
+      interest: 12_000,
+      principal: 88_000,
+      overpayment: 0,
+    });
+    expect(splitPayment(50_000, 12, 100_000)).toEqual({
+      interest: 500,
+      principal: 50_000,
+      overpayment: 49_500,
+    });
     expect(splitPayment(0, 12, 100_000)).toEqual({ interest: 0, principal: 0, overpayment: 100_000 });
   });
 

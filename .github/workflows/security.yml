@@ -1,0 +1,60 @@
+# Безопасность: зависимости, секреты в истории, статический анализ кода.
+# Запускается на каждый пуш и раз в неделю — уязвимости в зависимостях появляются
+# и без наших изменений, когда для старой версии публикуют новый CVE.
+
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 6 * * 1' # понедельник, 09:00 МСК
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependencies:
+    name: npm audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      # Блокирует только то, что уезжает к пользователям: продовые зависимости, high и выше.
+      # Уязвимости инструментов разработки видны отдельным шагом, но не красят проверку:
+      # постоянно красный статус быстро перестают читать.
+      - name: Продовые зависимости (блокирующая)
+        run: npm audit --omit=dev --audit-level=high
+      - name: Все зависимости (справочно)
+        run: npm audit || true
+
+  secrets:
+    name: Секреты в истории git
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0 # вся история: секрет мог попасть в старый коммит и быть удалён потом
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: github/codeql-action/init@ce5e7eeac396d720fe2d802714996c8ce561e311 # v3
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+      - uses: github/codeql-action/analyze@ce5e7eeac396d720fe2d802714996c8ce561e311 # v3

@@ -5,14 +5,22 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { api, createUser, ok, type Client } from '../api.setup';
 
-interface Account { id: string; name: string; type: string; balance: string }
+interface Account {
+  id: string;
+  name: string;
+  type: string;
+  balance: string;
+}
 
 let user: Client;
 let bank: Account;
 
 const accounts = () => ok<Account[]>(user, 'GET', '/accounts');
 const balanceOf = async (id: string) =>
-  Number((await ok<{ accounts: Account[] }>(user, 'GET', '/capital')).accounts.find((a) => a.id === id)?.balance ?? 0);
+  Number(
+    (await ok<{ accounts: Account[] }>(user, 'GET', '/capital')).accounts.find((a) => a.id === id)?.balance ??
+      0,
+  );
 
 beforeAll(async () => {
   user = await createUser('assets');
@@ -24,7 +32,10 @@ describe('Активы', () => {
   it('покупка списывает деньги и заводит актив на ту же сумму', async () => {
     const before = await balanceOf(bank.id);
     const res = await ok<{ accountId: string; transactionId: string }>(user, 'POST', '/assets/purchase', {
-      fromAccountId: bank.id, name: 'Велосипед', assetType: 'other_asset', amount: '80000',
+      fromAccountId: bank.id,
+      name: 'Велосипед',
+      assetType: 'other_asset',
+      amount: '80000',
     });
 
     expect(await balanceOf(bank.id)).toBe(before - 80000);
@@ -36,7 +47,10 @@ describe('Активы', () => {
     const cashBefore = await balanceOf(bank.id);
 
     const res = await ok<{ delta: string; direction: string; previousValue: string; newValue: string }>(
-      user, 'POST', `/assets/${asset.id}/revalue`, { newValue: '65000' },
+      user,
+      'POST',
+      `/assets/${asset.id}/revalue`,
+      { newValue: '65000' },
     );
     expect(res.direction).toBe('loss');
     // Дельта возвращается со знаком: минус — актив подешевел.
@@ -56,9 +70,12 @@ describe('Активы', () => {
     const asset = (await accounts()).find((a) => a.name === 'Велосипед')!;
     const cashBefore = await balanceOf(bank.id);
 
-    const res = await ok<{ cost: string; salePrice: string; profit: string; incomeTransactionId: string | null }>(
-      user, 'POST', `/assets/${asset.id}/sell`, { toAccountId: bank.id, salePrice: '72000' },
-    );
+    const res = await ok<{
+      cost: string;
+      salePrice: string;
+      profit: string;
+      incomeTransactionId: string | null;
+    }>(user, 'POST', `/assets/${asset.id}/sell`, { toAccountId: bank.id, salePrice: '72000' });
     expect(Number(res.cost)).toBe(65000);
     expect(Number(res.profit)).toBe(7000);
     expect(res.incomeTransactionId).not.toBeNull();
@@ -72,22 +89,34 @@ describe('Активы', () => {
   it('проданный актив нельзя продать второй раз', async () => {
     const hidden = await ok<{ id: string; name: string }[]>(user, 'GET', '/accounts/hidden');
     const sold = hidden.find((a) => a.name === 'Велосипед')!;
-    const res = await api(user, 'POST', `/assets/${sold.id}/sell`, { toAccountId: bank.id, salePrice: '1000' });
+    const res = await api(user, 'POST', `/assets/${sold.id}/sell`, {
+      toAccountId: bank.id,
+      salePrice: '1000',
+    });
     expect([400, 409]).toContain(res.status);
   });
 
   it('вложения в актив показывают покупку и расходы по нему', async () => {
     const created = await ok<{ accountId: string }>(user, 'POST', '/assets/purchase', {
-      fromAccountId: bank.id, name: 'Мотоцикл', assetType: 'other_asset', amount: '300000',
+      fromAccountId: bank.id,
+      name: 'Мотоцикл',
+      assetType: 'other_asset',
+      amount: '300000',
     });
     const categories = await ok<{ id: string; name: string }[]>(user, 'GET', '/categories?type=expense');
     await ok(user, 'POST', '/transactions', {
-      type: 'expense', categoryId: categories[0].id, fromAccountId: bank.id,
-      amount: '20000', linkedAssetId: created.accountId, comment: 'Ремонт',
+      type: 'expense',
+      categoryId: categories[0].id,
+      fromAccountId: bank.id,
+      amount: '20000',
+      linkedAssetId: created.accountId,
+      comment: 'Ремонт',
     });
 
     const info = await ok<{ purchase: string; invested: string; total: string; items: unknown[] }>(
-      user, 'GET', `/assets/${created.accountId}/investments`,
+      user,
+      'GET',
+      `/assets/${created.accountId}/investments`,
     );
     expect(Number(info.purchase)).toBe(300000);
     expect(Number(info.invested)).toBe(20000);
@@ -101,14 +130,24 @@ describe('Кредиты', () => {
 
   it('кредит создаётся с долгом и графиком платежа', async () => {
     const created = await ok<{ id: string }>(user, 'POST', '/credits', {
-      name: 'Автокредит', originalAmount: '250000', rate: '16,9', termMonths: 36,
-      startDate: new Date().toISOString(), paymentDay: 15,
+      name: 'Автокредит',
+      originalAmount: '250000',
+      rate: '16,9',
+      termMonths: 36,
+      startDate: new Date().toISOString(),
+      paymentDay: 15,
     });
     creditId = created.id;
 
-    const credits = await ok<{
-      id: string; currentPrincipal: string; scheduledPayment: string; remainingMonths: number; nextDueDate: string | null;
-    }[]>(user, 'GET', '/credits');
+    const credits = await ok<
+      {
+        id: string;
+        currentPrincipal: string;
+        scheduledPayment: string;
+        remainingMonths: number;
+        nextDueDate: string | null;
+      }[]
+    >(user, 'GET', '/credits');
     const credit = credits.find((c) => c.id === creditId)!;
 
     expect(Number(credit.currentPrincipal)).toBe(250000);
@@ -124,7 +163,9 @@ describe('Кредиты', () => {
     const cashBefore = await balanceOf(bank.id);
 
     const res = await ok<{ interest: string; principal: string; newPrincipal: string; overpayment: string }>(
-      user, 'POST', `/credits/${creditId}/pay`,
+      user,
+      'POST',
+      `/credits/${creditId}/pay`,
       { fromAccountId: bank.id, categoryId: creditCategory.id, amount: '8900.74' },
     );
 
@@ -137,12 +178,16 @@ describe('Кредиты', () => {
   });
 
   it('долг уменьшает капитал', async () => {
-    const capital = await ok<{ totalCredits: string; totalNetWorth: string; totalCash: string; totalOther: string }>(
-      user, 'GET', '/capital',
-    );
+    const capital = await ok<{
+      totalCredits: string;
+      totalNetWorth: string;
+      totalCash: string;
+      totalOther: string;
+    }>(user, 'GET', '/capital');
     expect(Number(capital.totalCredits)).toBeGreaterThan(0);
     expect(Number(capital.totalNetWorth)).toBeCloseTo(
-      Number(capital.totalCash) + Number(capital.totalOther) - Number(capital.totalCredits), 2,
+      Number(capital.totalCash) + Number(capital.totalOther) - Number(capital.totalCredits),
+      2,
     );
   });
 
@@ -152,7 +197,9 @@ describe('Кредиты', () => {
     const categories = await ok<{ id: string; name: string }[]>(user, 'GET', '/categories?type=expense');
 
     const res = await api(user, 'POST', `/credits/${creditId}/pay`, {
-      fromAccountId: theirAccounts[0].id, categoryId: categories[0].id, amount: '1000',
+      fromAccountId: theirAccounts[0].id,
+      categoryId: categories[0].id,
+      amount: '1000',
     });
     expect(res.status).toBe(400);
     expect((res.body as { error: string }).error).toBe('Source account not found');

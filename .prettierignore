@@ -1,0 +1,10 @@
+dist
+dev-dist
+node_modules
+coverage
+package-lock.json
+docs/screenshots
+supabase/.temp
+supabase/.branches
+# Документы на русском держат ручной перенос строк — форматтер его ломает.
+*.md

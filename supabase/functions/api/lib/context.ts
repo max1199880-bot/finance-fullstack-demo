@@ -24,25 +24,22 @@ export interface Ctx {
   origin: string | null;
   params: Record<string, string>;
   userId: string;
+  /** Общий демо-аккаунт: удалять в нём ничего нельзя (см. миграцию security_hardening). */
+  isDemo: boolean;
   db: SupabaseClient;
   /** Профиль загружается один раз на запрос: он нужен почти везде (день начала месяца). */
   profile(): Promise<Profile>;
 }
 
-export async function buildContext(
-  req: Request,
-  url: URL,
-  params: Record<string, string>,
-): Promise<Ctx> {
+export async function buildContext(req: Request, url: URL, params: Record<string, string>): Promise<Ctx> {
   const auth = req.headers.get('Authorization') ?? '';
   const token = auth.toLowerCase().startsWith('bearer ') ? auth.slice(7).trim() : '';
   if (!token) throw unauthorized();
 
-  const db = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_ANON_KEY')!,
-    { global: { headers: { Authorization: `Bearer ${token}` } }, auth: { persistSession: false } },
-  );
+  const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false },
+  });
 
   const { data, error } = await db.auth.getUser(token);
   if (error || !data.user) throw unauthorized();
@@ -54,12 +51,15 @@ export async function buildContext(
     origin: req.headers.get('Origin'),
     params,
     userId: data.user.id,
+    isDemo: data.user.app_metadata?.demo === true,
     db,
     async profile() {
       if (cached) return cached;
       const { data: p, error: e } = await db
         .from('profiles')
-        .select('id, display_name, currency, month_start_day, timezone, reminders_enabled, onboarding_completed')
+        .select(
+          'id, display_name, currency, month_start_day, timezone, reminders_enabled, onboarding_completed',
+        )
         .eq('id', data.user!.id)
         .single();
       if (e || !p) throw new HttpError(500, 'Профиль пользователя не найден');

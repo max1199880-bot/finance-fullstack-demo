@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
-import type { Session } from '@supabase/supabase-js';
+import type { Session } from '@supabase/auth-js';
 import { supabase } from '../lib/supabase';
 
 /**

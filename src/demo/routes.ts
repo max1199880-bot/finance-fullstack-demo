@@ -54,7 +54,8 @@ const fail = (status: number, message: string): never => {
 
 // ── разбор тела ─────────────────────────────────────────────────────────────
 
-const str = (b: Body, key: string): string | undefined => (typeof b[key] === 'string' ? (b[key] as string) : undefined);
+const str = (b: Body, key: string): string | undefined =>
+  typeof b[key] === 'string' ? (b[key] as string) : undefined;
 const trimmed = (b: Body, key: string): string => (str(b, key) ?? '').trim();
 /** Положительная сумма, как parseAmount сервера прода: ноль и отрицательные — ошибка. */
 const amountOf = (b: Body, key = 'amount'): Kopecks | null => {
@@ -70,7 +71,10 @@ const commentOf = (b: Body): string | null => {
 
 const ACCOUNT_ORDER: AccountType[] = ['cash', 'bank', 'investment', 'other_asset', 'credit', 'credit_buffer'];
 const sortAccounts = (list: Account[]) =>
-  [...list].sort((a, b) => ACCOUNT_ORDER.indexOf(a.type) - ACCOUNT_ORDER.indexOf(b.type) || a.name.localeCompare(b.name, 'ru'));
+  [...list].sort(
+    (a, b) =>
+      ACCOUNT_ORDER.indexOf(a.type) - ACCOUNT_ORDER.indexOf(b.type) || a.name.localeCompare(b.name, 'ru'),
+  );
 
 const isCashOrBank = (a: Account | undefined) => a?.type === 'cash' || a?.type === 'bank';
 
@@ -215,7 +219,9 @@ function book(ctx: Ctx, t: Omit<Transaction, 'id'>, primary = true): Transaction
 
 function periodOf(ctx: Ctx): { from: Date; to: Date } {
   const to = ctx.q.get('to') ? new Date(ctx.q.get('to') as string) : ctx.now;
-  const from = ctx.q.get('from') ? new Date(ctx.q.get('from') as string) : new Date(ctx.now.getTime() - 30 * 86_400_000);
+  const from = ctx.q.get('from')
+    ? new Date(ctx.q.get('from') as string)
+    : new Date(ctx.now.getTime() - 30 * 86_400_000);
   if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) fail(400, 'Invalid date');
   return { from, to };
 }
@@ -238,13 +244,18 @@ function totalsIn(db: DemoDb, from: Date, to: Date) {
 
 const LIMIT_EXPENSE_MAX = 12;
 const LIMIT_EXPENSE_MIN = 6;
-const activeExpenseCount = (db: DemoDb) => db.categories.filter((c) => c.type === 'expense' && c.isActive).length;
+const activeExpenseCount = (db: DemoDb) =>
+  db.categories.filter((c) => c.type === 'expense' && c.isActive).length;
 
 // ── таблица маршрутов ───────────────────────────────────────────────────────
 
 const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
   // Пользователь и авторизация
-  ['GET', /^\/api\/auth\/me$/, ({ db }) => ({ id: db.user.id, firstName: db.user.firstName, telegramUserId: db.user.telegramUserId })],
+  [
+    'GET',
+    /^\/api\/auth\/me$/,
+    ({ db }) => ({ id: db.user.id, firstName: db.user.firstName, telegramUserId: db.user.telegramUserId }),
+  ],
   ['GET', /^\/api\/auth\/widget-config$/, () => ({ botUsername: '' })],
   ['POST', /^\/api\/auth\/logout$/, () => ({ ok: true })],
   ['POST', /^\/api\/auth\/telegram-login$/, () => fail(401, 'В демо-версии вход не нужен')],
@@ -254,11 +265,18 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
     /^\/api\/me$/,
     ({ db, body }) => {
       const day = body.monthStartDay;
-      if (typeof day === 'number' && Number.isInteger(day) && day >= 1 && day <= 28) db.user.monthStartDay = day;
+      if (typeof day === 'number' && Number.isInteger(day) && day >= 1 && day <= 28)
+        db.user.monthStartDay = day;
       if (typeof body.remindersEnabled === 'boolean') db.user.remindersEnabled = body.remindersEnabled;
-      if (typeof body.onboardingCompleted === 'boolean') db.user.onboardingCompleted = body.onboardingCompleted;
+      if (typeof body.onboardingCompleted === 'boolean')
+        db.user.onboardingCompleted = body.onboardingCompleted;
       const u = db.user;
-      return { ok: true, monthStartDay: u.monthStartDay, remindersEnabled: u.remindersEnabled, onboardingCompleted: u.onboardingCompleted };
+      return {
+        ok: true,
+        monthStartDay: u.monthStartDay,
+        remindersEnabled: u.remindersEnabled,
+        onboardingCompleted: u.onboardingCompleted,
+      };
     },
   ],
   [
@@ -272,7 +290,10 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
         me: meDTO(db, now),
         summary: monthSummary(db, month),
         capitalTotals,
-        recentTransactions: [...db.transactions].sort(byDateDesc).slice(0, limit).map((t) => txDTO(db, t)),
+        recentTransactions: [...db.transactions]
+          .sort(byDateDesc)
+          .slice(0, limit)
+          .map((t) => txDTO(db, t)),
       };
     },
   ],
@@ -296,7 +317,12 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
     /^\/api\/categories\/all$/,
     ({ db }) =>
       [...db.categories]
-        .sort((a, b) => (a.type === b.type ? 0 : a.type === 'expense' ? -1 : 1) || a.order - b.order || a.name.localeCompare(b.name, 'ru'))
+        .sort(
+          (a, b) =>
+            (a.type === b.type ? 0 : a.type === 'expense' ? -1 : 1) ||
+            a.order - b.order ||
+            a.name.localeCompare(b.name, 'ru'),
+        )
         .map(({ id, name, type, isActive, order, emoji }) => ({ id, name, type, isActive, order, emoji })),
   ],
   [
@@ -305,7 +331,13 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
     ({ db }) =>
       db.categories
         .filter((c) => !c.isActive)
-        .map((c) => ({ id: c.id, name: c.name, type: c.type, emoji: c.emoji, txCount: db.transactions.filter((t) => t.categoryId === c.id).length })),
+        .map((c) => ({
+          id: c.id,
+          name: c.name,
+          type: c.type,
+          emoji: c.emoji,
+          txCount: db.transactions.filter((t) => t.categoryId === c.id).length,
+        })),
   ],
   [
     'POST',
@@ -315,8 +347,15 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
       const type = body.type === 'income' ? 'income' : 'expense';
       if (!name) fail(400, 'name required');
       const dup = db.categories.find((c) => c.type === type && c.name.toLowerCase() === name.toLowerCase());
-      if (dup) fail(409, dup.isActive ? 'Категория с таким именем уже существует' : 'Категория с таким именем была скрыта. Восстановить или удалить навсегда?');
-      if (type === 'expense' && activeExpenseCount(db) >= LIMIT_EXPENSE_MAX) fail(400, `Максимум ${LIMIT_EXPENSE_MAX} активных категорий расходов`);
+      if (dup)
+        fail(
+          409,
+          dup.isActive
+            ? 'Категория с таким именем уже существует'
+            : 'Категория с таким именем была скрыта. Восстановить или удалить навсегда?',
+        );
+      if (type === 'expense' && activeExpenseCount(db) >= LIMIT_EXPENSE_MAX)
+        fail(400, `Максимум ${LIMIT_EXPENSE_MAX} активных категорий расходов`);
       const order = Math.max(-1, ...db.categories.filter((c) => c.type === type).map((c) => c.order)) + 1;
       const id = store.nextId('cat');
       db.categories.push({ id, name, type, isActive: true, order, emoji: str(body, 'emoji') ?? null });
@@ -344,9 +383,15 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
     ({ db, body, params }) => {
       const c = db.categories.find((x) => x.id === params[0]) ?? fail(404, 'Category not found');
       if (typeof body.name === 'string' && body.name.trim()) c.name = body.name.trim();
-      if (body.emoji === null || typeof body.emoji === 'string') c.emoji = (body.emoji as string | null) || null;
+      if (body.emoji === null || typeof body.emoji === 'string')
+        c.emoji = (body.emoji as string | null) || null;
       if (typeof body.isActive === 'boolean') {
-        if (!body.isActive && c.isActive && c.type === 'expense' && activeExpenseCount(db) <= LIMIT_EXPENSE_MIN) {
+        if (
+          !body.isActive &&
+          c.isActive &&
+          c.type === 'expense' &&
+          activeExpenseCount(db) <= LIMIT_EXPENSE_MIN
+        ) {
           fail(400, `Должно остаться минимум ${LIMIT_EXPENSE_MIN} активных категорий расходов`);
         }
         c.isActive = body.isActive;
@@ -359,7 +404,8 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
     /^\/api\/categories\/([^/]+)\/purge$/,
     ({ db, params }) => {
       const c = db.categories.find((x) => x.id === params[0]) ?? fail(404, 'Category not found');
-      if (c.isActive && c.type === 'expense' && activeExpenseCount(db) <= LIMIT_EXPENSE_MIN) fail(400, `Должно остаться минимум ${LIMIT_EXPENSE_MIN} активных категорий расходов`);
+      if (c.isActive && c.type === 'expense' && activeExpenseCount(db) <= LIMIT_EXPENSE_MIN)
+        fail(400, `Должно остаться минимум ${LIMIT_EXPENSE_MIN} активных категорий расходов`);
       const before = db.transactions.length;
       db.transactions = db.transactions.filter((t) => t.categoryId !== c.id);
       db.categories = db.categories.filter((x) => x.id !== c.id);
@@ -371,7 +417,8 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
     /^\/api\/categories\/([^/]+)$/,
     ({ db, params }) => {
       const c = db.categories.find((x) => x.id === params[0]) ?? fail(404, 'Category not found');
-      if (c.isActive && c.type === 'expense' && activeExpenseCount(db) <= LIMIT_EXPENSE_MIN) fail(400, `Должно остаться минимум ${LIMIT_EXPENSE_MIN} активных категорий расходов`);
+      if (c.isActive && c.type === 'expense' && activeExpenseCount(db) <= LIMIT_EXPENSE_MIN)
+        fail(400, `Должно остаться минимум ${LIMIT_EXPENSE_MIN} активных категорий расходов`);
       if (db.transactions.some((t) => t.categoryId === c.id)) {
         c.isActive = false;
         return { ok: true, action: 'hidden', reason: 'has_transactions' };
@@ -397,7 +444,12 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
     ({ db }) =>
       db.incomeSources
         .filter((s) => !s.isActive)
-        .map((s) => ({ id: s.id, name: s.name, emoji: s.emoji, txCount: db.transactions.filter((t) => t.incomeSourceId === s.id).length })),
+        .map((s) => ({
+          id: s.id,
+          name: s.name,
+          emoji: s.emoji,
+          txCount: db.transactions.filter((t) => t.incomeSourceId === s.id).length,
+        })),
   ],
   [
     'POST',
@@ -406,7 +458,13 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
       const name = trimmed(body, 'name');
       if (!name) fail(400, 'name required');
       const dup = db.incomeSources.find((s) => s.name.toLowerCase() === name.toLowerCase());
-      if (dup) fail(409, dup.isActive ? 'Источник с таким именем уже существует' : 'Источник с таким именем был скрыт. Восстановить или удалить навсегда?');
+      if (dup)
+        fail(
+          409,
+          dup.isActive
+            ? 'Источник с таким именем уже существует'
+            : 'Источник с таким именем был скрыт. Восстановить или удалить навсегда?',
+        );
       const id = store.nextId('src');
       db.incomeSources.push({ id, name, emoji: str(body, 'emoji') ?? null, isActive: true });
       return { ok: true, id };
@@ -418,7 +476,8 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
     ({ db, body, params }) => {
       const s = db.incomeSources.find((x) => x.id === params[0]) ?? fail(404, 'Source not found');
       if (typeof body.name === 'string' && body.name.trim()) s.name = body.name.trim();
-      if (body.emoji === null || typeof body.emoji === 'string') s.emoji = (body.emoji as string | null) || null;
+      if (body.emoji === null || typeof body.emoji === 'string')
+        s.emoji = (body.emoji as string | null) || null;
       if (typeof body.isActive === 'boolean') s.isActive = body.isActive;
       return { ok: true };
     },
@@ -464,7 +523,13 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
         .filter((t) => !from || new Date(t.date) >= from)
         .filter((t) => !to || new Date(t.date) < to)
         .filter((t) => !type || t.type === type)
-        .filter((t) => (accountId ? t.fromAccountId === accountId || t.toAccountId === accountId : !accountType || typeOf(t.fromAccountId) === accountType || typeOf(t.toAccountId) === accountType))
+        .filter((t) =>
+          accountId
+            ? t.fromAccountId === accountId || t.toAccountId === accountId
+            : !accountType ||
+              typeOf(t.fromAccountId) === accountType ||
+              typeOf(t.toAccountId) === accountType,
+        )
         .sort(byDateDesc)
         .slice(0, limit)
         .map((t) => txDTO(db, t));
@@ -479,7 +544,15 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
       const type = str(body, 'type') as TxType | undefined;
       const date = now.toISOString();
       const comment = commentOf(body);
-      const base = { date, amount, comment, categoryId: null, incomeSourceId: null, fromAccountId: null, toAccountId: null };
+      const base = {
+        date,
+        amount,
+        comment,
+        categoryId: null,
+        incomeSourceId: null,
+        fromAccountId: null,
+        toAccountId: null,
+      };
 
       if (type === 'expense') {
         const categoryId = str(body, 'categoryId') ?? fail(400, 'categoryId required');
@@ -493,9 +566,16 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
         const linkedAssetId = str(body, 'linkedAssetId');
         if (linkedAssetId) {
           const asset = findAccount(db, linkedAssetId) ?? fail(404, 'Asset not found');
-          if (asset.type !== 'investment' && asset.type !== 'other_asset') fail(400, 'Можно привязать только к технике/активу');
+          if (asset.type !== 'investment' && asset.type !== 'other_asset')
+            fail(400, 'Можно привязать только к технике/активу');
         }
-        const tx = book(ctx, { ...base, type, categoryId, fromAccountId, ...(linkedAssetId ? { linkedAssetId } : {}) });
+        const tx = book(ctx, {
+          ...base,
+          type,
+          categoryId,
+          fromAccountId,
+          ...(linkedAssetId ? { linkedAssetId } : {}),
+        });
         return { ok: true, id: tx.id };
       }
       if (type === 'income') {
@@ -516,9 +596,16 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
         if (fromAccountId === toAccountId) fail(400, 'Source and destination must differ');
         findAccount(db, fromAccountId) ?? fail(404, 'Account not found');
         const dest = findAccount(db, toAccountId) ?? fail(404, 'Account not found');
-        if (type === 'transfer_to_investment' && dest.type !== 'investment') fail(400, 'transfer_to_investment requires destination of type investment');
-        if (type === 'transfer_between_accounts' && dest.type === 'investment') fail(400, 'Use transfer_to_investment for transfers to investment accounts');
-        const tx = book(ctx, { ...base, type, fromAccountId: fromAccountId ?? null, toAccountId: toAccountId ?? null });
+        if (type === 'transfer_to_investment' && dest.type !== 'investment')
+          fail(400, 'transfer_to_investment requires destination of type investment');
+        if (type === 'transfer_between_accounts' && dest.type === 'investment')
+          fail(400, 'Use transfer_to_investment for transfers to investment accounts');
+        const tx = book(ctx, {
+          ...base,
+          type,
+          fromAccountId: fromAccountId ?? null,
+          toAccountId: toAccountId ?? null,
+        });
         return { ok: true, id: tx.id };
       }
       return fail(400, 'Invalid type');
@@ -532,9 +619,11 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
       const date = now.toISOString();
       const next: Transaction = { ...tx };
       if (body.amount !== undefined) next.amount = amountOf(body) ?? fail(400, 'Invalid amount');
-      if ('comment' in body) next.comment = typeof body.comment === 'string' && body.comment.trim() ? body.comment.trim() : null;
+      if ('comment' in body)
+        next.comment = typeof body.comment === 'string' && body.comment.trim() ? body.comment.trim() : null;
       if (tx.type === 'expense' && typeof body.categoryId === 'string') {
-        if (!db.categories.some((c) => c.id === body.categoryId && c.type === 'expense')) fail(404, 'Category not found');
+        if (!db.categories.some((c) => c.id === body.categoryId && c.type === 'expense'))
+          fail(404, 'Category not found');
         next.categoryId = body.categoryId;
       }
       if (tx.type === 'income' && typeof body.incomeSourceId === 'string') {
@@ -543,7 +632,8 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
       }
       if (tx.type === 'income' && 'toAccountId' in body) {
         const id = typeof body.toAccountId === 'string' ? body.toAccountId : null;
-        if (id && !isCashOrBank(findAccount(db, id) ?? fail(404, 'Account not found'))) fail(400, 'Account must be cash or bank');
+        if (id && !isCashOrBank(findAccount(db, id) ?? fail(404, 'Account not found')))
+          fail(400, 'Account must be cash or bank');
         next.toAccountId = id;
       }
       // Откат старой проводки и проводка новой — как в transactionService прода.
@@ -570,13 +660,30 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
       const { db, body, now, store } = ctx;
       const amount = amountOf(body) ?? fail(400, 'Invalid amount');
       const fromAccountId = str(body, 'fromAccountId') ?? fail(400, 'fromAccountId required');
-      if (!isCashOrBank(findAccount(db, fromAccountId) ?? fail(404, 'Account not found'))) fail(400, 'Account must be cash or bank');
+      if (!isCashOrBank(findAccount(db, fromAccountId) ?? fail(404, 'Account not found')))
+        fail(400, 'Account must be cash or bank');
       let cat = db.categories.find((c) => c.type === 'expense' && c.name === 'Убыток');
       if (!cat) {
-        cat = { id: store.nextId('cat'), name: 'Убыток', type: 'expense', isActive: true, order: 99, emoji: '🔻' };
+        cat = {
+          id: store.nextId('cat'),
+          name: 'Убыток',
+          type: 'expense',
+          isActive: true,
+          order: 99,
+          emoji: '🔻',
+        };
         db.categories.push(cat);
       }
-      const tx = book(ctx, { date: now.toISOString(), type: 'expense', amount, categoryId: cat.id, incomeSourceId: null, fromAccountId, toAccountId: null, comment: commentOf(body) });
+      const tx = book(ctx, {
+        date: now.toISOString(),
+        type: 'expense',
+        amount,
+        categoryId: cat.id,
+        incomeSourceId: null,
+        fromAccountId,
+        toAccountId: null,
+        comment: commentOf(body),
+      });
       return { ok: true, id: tx.id, categoryId: cat.id };
     },
   ],
@@ -593,7 +700,8 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
       const rows = db.categories
         .filter((c) => c.type === 'expense' && c.isActive)
         .map((c) => {
-          const planned = db.categoryPlans.find((p) => p.month === month && p.categoryId === c.id)?.amount ?? 0;
+          const planned =
+            db.categoryPlans.find((p) => p.month === month && p.categoryId === c.id)?.amount ?? 0;
           const actual = sum(list.filter((t) => t.type === 'expense' && t.categoryId === c.id));
           return { categoryId: c.id, name: c.name, actualK: actual, ...planFact(planned, actual) };
         })
@@ -601,8 +709,14 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
         .sort((a, b) => order[a.status] - order[b.status] || b.actualK - a.actualK)
         .map(({ actualK: _a, ...row }) => row);
       const global = db.globalPlans.find((g) => g.month === month);
-      const plannedTotal = global?.plannedTotalExpenses ?? db.categoryPlans.filter((p) => p.month === month).reduce((a, p) => a + p.amount, 0);
-      const actualTotal = sum(list.filter((t) => t.type === 'expense' && db.categories.some((c) => c.id === t.categoryId && c.isActive)));
+      const plannedTotal =
+        global?.plannedTotalExpenses ??
+        db.categoryPlans.filter((p) => p.month === month).reduce((a, p) => a + p.amount, 0);
+      const actualTotal = sum(
+        list.filter(
+          (t) => t.type === 'expense' && db.categories.some((c) => c.id === t.categoryId && c.isActive),
+        ),
+      );
       return {
         month,
         categories: rows,
@@ -639,7 +753,8 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
       if (amount === null || amount < 0) fail(400, 'Invalid amount');
       const categoryId = str(body, 'categoryId') ?? '';
       if (!db.categories.some((c) => c.id === categoryId)) fail(404, 'Category not found');
-      const extra = typeof body.propagateMonths === 'number' ? Math.min(36, Math.max(0, body.propagateMonths)) : 11;
+      const extra =
+        typeof body.propagateMonths === 'number' ? Math.min(36, Math.max(0, body.propagateMonths)) : 11;
       const onlyEmpty = body.onlyEmpty !== false;
       let written = 0;
       let skipped = 0;
@@ -653,7 +768,9 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
           skipped++;
           continue;
         }
-        db.categoryPlans = db.categoryPlans.filter((p) => !(p.month === month && p.categoryId === categoryId));
+        db.categoryPlans = db.categoryPlans.filter(
+          (p) => !(p.month === month && p.categoryId === categoryId),
+        );
         if (amount) db.categoryPlans.push({ month, categoryId, amount });
         written++;
       }
@@ -696,7 +813,9 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
     /^\/api\/accounts$/,
     ({ db, q }): AccountDTO[] => {
       const onlyCashOrBank = q.get('type') === 'cash_or_bank';
-      return sortAccounts(db.accounts.filter((a) => a.isActive && (!onlyCashOrBank || isCashOrBank(a)))).map((a) => accountDTO(db, a));
+      return sortAccounts(db.accounts.filter((a) => a.isActive && (!onlyCashOrBank || isCashOrBank(a)))).map(
+        (a) => accountDTO(db, a),
+      );
     },
   ],
   [
@@ -717,8 +836,10 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
       const name = trimmed(body, 'name');
       if (!name) fail(400, 'name required');
       const type = str(body, 'type');
-      if (type !== 'cash' && type !== 'bank' && type !== 'investment' && type !== 'other_asset') fail(400, 'type must be cash, bank, investment, or other_asset');
-      if (db.accounts.some((a) => a.name.toLowerCase() === name.toLowerCase())) fail(409, 'Аккаунт с таким именем уже существует');
+      if (type !== 'cash' && type !== 'bank' && type !== 'investment' && type !== 'other_asset')
+        fail(400, 'type must be cash, bank, investment, or other_asset');
+      if (db.accounts.some((a) => a.name.toLowerCase() === name.toLowerCase()))
+        fail(409, 'Аккаунт с таким именем уже существует');
       const id = store.nextId('acc');
       db.accounts.push({ id, name, type: type as AccountType, isActive: true });
       const initial = parseMoney(body.initialBalance);
@@ -731,7 +852,10 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
     /^\/api\/accounts\/([^/]+)\/tx-count$/,
     ({ db, params }) => {
       findAccount(db, params[0]) ?? fail(404, 'Account not found');
-      return { count: db.transactions.filter((t) => t.fromAccountId === params[0] || t.toAccountId === params[0]).length };
+      return {
+        count: db.transactions.filter((t) => t.fromAccountId === params[0] || t.toAccountId === params[0])
+          .length,
+      };
     },
   ],
   [
@@ -767,7 +891,8 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
       const acc = findAccount(db, params[0]) ?? fail(404, 'Account not found');
       if (typeof body.name === 'string' && body.name.trim()) {
         const name = body.name.trim();
-        if (db.accounts.some((a) => a.id !== acc.id && a.name.toLowerCase() === name.toLowerCase())) fail(409, 'Имя занято другим счётом');
+        if (db.accounts.some((a) => a.id !== acc.id && a.name.toLowerCase() === name.toLowerCase()))
+          fail(409, 'Имя занято другим счётом');
         acc.name = name;
       }
       if (typeof body.isActive === 'boolean') acc.isActive = body.isActive;
@@ -804,7 +929,11 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
     /^\/api\/credits\/([^/]+)\/recalc$/,
     ({ db, params, now }) => {
       const c = creditDTO(db, params[0] ?? '', now);
-      return { remainingPrincipal: c.currentPrincipal, remainingMonths: c.remainingMonths, newMonthlyPayment: c.scheduledPayment };
+      return {
+        remainingPrincipal: c.currentPrincipal,
+        remainingMonths: c.remainingMonths,
+        newMonthlyPayment: c.scheduledPayment,
+      };
     },
   ],
   [
@@ -821,11 +950,19 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
       if (!Number.isInteger(termMonths) || termMonths <= 0) fail(400, 'termMonths must be a positive number');
       const startDate = typeof body.startDate === 'string' ? new Date(body.startDate) : now;
       if (Number.isNaN(startDate.getTime())) fail(400, 'invalid startDate');
-      if (db.accounts.some((a) => a.name.toLowerCase() === name.toLowerCase())) fail(409, 'Аккаунт с таким именем уже существует');
+      if (db.accounts.some((a) => a.name.toLowerCase() === name.toLowerCase()))
+        fail(409, 'Аккаунт с таким именем уже существует');
       const day = Number(body.paymentDay);
       const id = store.nextId('acc');
       db.accounts.push({ id, name, type: 'credit', isActive: true });
-      db.credits.push({ id, originalAmount, rate, termMonths, startDate: startDate.toISOString(), paymentDay: Number.isInteger(day) && day >= 1 && day <= 28 ? day : null });
+      db.credits.push({
+        id,
+        originalAmount,
+        rate,
+        termMonths,
+        startDate: startDate.toISOString(),
+        paymentDay: Number.isInteger(day) && day >= 1 && day <= 28 ? day : null,
+      });
       setBalance(db, id, originalAmount, startDate.toISOString());
       return { ok: true, id };
     },
@@ -878,14 +1015,24 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
       const name = trimmed(body, 'name');
       if (!name) fail(400, 'name required');
       const assetType = str(body, 'assetType');
-      if (assetType !== 'investment' && assetType !== 'other_asset') fail(400, 'assetType must be investment or other_asset');
+      if (assetType !== 'investment' && assetType !== 'other_asset')
+        fail(400, 'assetType must be investment or other_asset');
       const unit = amountOf(body) ?? fail(400, 'invalid amount');
-      const qty = Number.isInteger(body.quantity) && (body.quantity as number) > 0 ? (body.quantity as number) : 1;
+      const qty =
+        Number.isInteger(body.quantity) && (body.quantity as number) > 0 ? (body.quantity as number) : 1;
       const from = findAccount(db, str(body, 'fromAccountId')) ?? fail(404, 'source account not found');
       if (!isCashOrBank(from)) fail(400, 'source account must be cash or bank');
-      if (db.accounts.some((a) => a.name.toLowerCase() === name.toLowerCase())) fail(409, 'Аккаунт с таким именем уже существует');
+      if (db.accounts.some((a) => a.name.toLowerCase() === name.toLowerCase()))
+        fail(409, 'Аккаунт с таким именем уже существует');
       const id = store.nextId('acc');
-      db.accounts.push({ id, name, type: assetType as AccountType, isActive: true, purchasePrice: unit, liability: false });
+      db.accounts.push({
+        id,
+        name,
+        type: assetType as AccountType,
+        isActive: true,
+        purchasePrice: unit,
+        liability: false,
+      });
       const total = unit * qty;
       const tx = book(ctx, {
         date: ctx.now.toISOString(),
@@ -895,7 +1042,8 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
         incomeSourceId: null,
         fromAccountId: from.id,
         toAccountId: id,
-        comment: commentOf(body) ?? (qty > 1 ? `Покупка: ${name} (${qty} шт × ${rub(unit)})` : `Покупка: ${name}`),
+        comment:
+          commentOf(body) ?? (qty > 1 ? `Покупка: ${name} (${qty} шт × ${rub(unit)})` : `Покупка: ${name}`),
       });
       return { ok: true, accountId: id, transactionId: tx.id, newSourceBalance: rub(balanceOf(db, from.id)) };
     },
@@ -909,13 +1057,23 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
       const { db, body, params, now } = ctx;
       const asset = findAccount(db, params[0]) ?? fail(404, 'Asset not found');
       if (!asset.isActive) fail(409, 'Актив уже продан');
-      if (asset.type !== 'investment' && asset.type !== 'other_asset') fail(400, 'Only investments and other assets can be sold');
+      if (asset.type !== 'investment' && asset.type !== 'other_asset')
+        fail(400, 'Only investments and other assets can be sold');
       const to = findAccount(db, str(body, 'toAccountId')) ?? fail(404, 'Destination account not found');
       if (!isCashOrBank(to)) fail(400, 'Destination must be cash or bank');
       const salePrice = amountOf(body, 'salePrice') ?? fail(400, 'Invalid sale price');
       const cost = balanceOf(db, asset.id);
       const date = now.toISOString();
-      const transfer = book(ctx, { date, type: 'transfer_between_accounts', amount: Math.min(cost, salePrice), categoryId: null, incomeSourceId: null, fromAccountId: asset.id, toAccountId: to.id, comment: `Продажа: ${asset.name}` });
+      const transfer = book(ctx, {
+        date,
+        type: 'transfer_between_accounts',
+        amount: Math.min(cost, salePrice),
+        categoryId: null,
+        incomeSourceId: null,
+        fromAccountId: asset.id,
+        toAccountId: to.id,
+        comment: `Продажа: ${asset.name}`,
+      });
       setBalance(db, asset.id, 0, date);
       let incomeId: string | null = null;
       const profit = salePrice - cost;
@@ -925,12 +1083,32 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
           src = { id: ctx.store.nextId('src'), name: 'Прочее', emoji: null, isActive: true };
           db.incomeSources.push(src);
         }
-        incomeId = book(ctx, { date, type: 'income', amount: profit, categoryId: null, incomeSourceId: src.id, fromAccountId: null, toAccountId: to.id, comment: `Прибыль с продажи: ${asset.name}` }, false).id;
+        incomeId = book(
+          ctx,
+          {
+            date,
+            type: 'income',
+            amount: profit,
+            categoryId: null,
+            incomeSourceId: src.id,
+            fromAccountId: null,
+            toAccountId: to.id,
+            comment: `Прибыль с продажи: ${asset.name}`,
+          },
+          false,
+        ).id;
       } else if (salePrice < cost) {
         // Transfer покрыл только salePrice — остаток цены ушёл в убыток, баланс актива уже обнулён.
       }
       asset.isActive = false;
-      return { ok: true, transferTransactionId: transfer.id, incomeTransactionId: incomeId, cost: rub(cost), salePrice: rub(salePrice), profit: rub(profit) };
+      return {
+        ok: true,
+        transferTransactionId: transfer.id,
+        incomeTransactionId: incomeId,
+        cost: rub(cost),
+        salePrice: rub(salePrice),
+        profit: rub(profit),
+      };
     },
   ],
   [
@@ -946,11 +1124,29 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
       const principal = Math.min(amount, rest);
       const date = now.toISOString();
       const fullySold = rest - principal <= 0;
-      const transfer = book(ctx, { date, type: 'transfer_between_accounts', amount: principal, categoryId: null, incomeSourceId: null, fromAccountId: asset.id, toAccountId: to.id, comment: `${fullySold ? 'Продажа' : 'Предоплата'}: ${asset.name}` });
+      const transfer = book(ctx, {
+        date,
+        type: 'transfer_between_accounts',
+        amount: principal,
+        categoryId: null,
+        incomeSourceId: null,
+        fromAccountId: asset.id,
+        toAccountId: to.id,
+        comment: `${fullySold ? 'Продажа' : 'Предоплата'}: ${asset.name}`,
+      });
       const profit = amount - principal;
       if (profit > 0) adjust(db, to.id, profit, date);
       if (fullySold) asset.isActive = false;
-      return { ok: true, transferTransactionId: transfer.id, incomeTransactionId: null, received: rub(amount), principal: rub(principal), profit: rub(profit), newAssetBalance: rub(balanceOf(db, asset.id)), fullySold };
+      return {
+        ok: true,
+        transferTransactionId: transfer.id,
+        incomeTransactionId: null,
+        received: rub(amount),
+        principal: rub(principal),
+        profit: rub(profit),
+        newAssetBalance: rub(balanceOf(db, asset.id)),
+        fullySold,
+      };
     },
   ],
   [
@@ -981,7 +1177,14 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
         comment: commentOf(body) ?? `Переоценка: ${asset.name}`,
       };
       db.transactions.push(tx);
-      return { ok: true, revalTransactionId: tx.id, previousValue: rub(prev), newValue: rub(value), delta: rub(value - prev), direction: gain ? 'gain' : 'loss' };
+      return {
+        ok: true,
+        revalTransactionId: tx.id,
+        previousValue: rub(prev),
+        newValue: rub(value),
+        delta: rub(value - prev),
+        direction: gain ? 'gain' : 'loss',
+      };
     },
   ],
   [
@@ -989,7 +1192,9 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
     /^\/api\/assets\/([^/]+)\/investments$/,
     ({ db, params }) => {
       const asset = findAccount(db, params[0]) ?? fail(404, 'Asset not found');
-      const items = db.transactions.filter((t) => t.type === 'expense' && t.linkedAssetId === asset.id).sort(byDateDesc);
+      const items = db.transactions
+        .filter((t) => t.type === 'expense' && t.linkedAssetId === asset.id)
+        .sort(byDateDesc);
       const current = balanceOf(db, asset.id);
       const purchase = asset.purchasePrice ?? current;
       const invested = sum(items);
@@ -1002,7 +1207,13 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
         total: rub(purchase + invested),
         currentValue: rub(current),
         marginNow: rub(current - (purchase + invested)),
-        items: items.map((t) => ({ id: t.id, date: t.date, amount: rub(t.amount), category: db.categories.find((c) => c.id === t.categoryId)?.name ?? null, comment: t.comment })),
+        items: items.map((t) => ({
+          id: t.id,
+          date: t.date,
+          amount: rub(t.amount),
+          category: db.categories.find((c) => c.id === t.categoryId)?.name ?? null,
+          comment: t.comment,
+        })),
       };
     },
   ],
@@ -1017,7 +1228,14 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
         // Переход актив → пассив: разовая запись «Покупка (пассив)» в категорию «Покупки», балансы не трогаются.
         let cat = db.categories.find((c) => c.type === 'expense' && c.name === 'Покупки');
         if (!cat) {
-          cat = { id: store.nextId('cat'), name: 'Покупки', type: 'expense', isActive: true, order: 99, emoji: null };
+          cat = {
+            id: store.nextId('cat'),
+            name: 'Покупки',
+            type: 'expense',
+            isActive: true,
+            order: 99,
+            emoji: null,
+          };
           db.categories.push(cat);
         }
         const tx: Transaction = {
@@ -1066,7 +1284,8 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
       const expenses = db.transactions.filter((t) => t.type === 'expense' && inRange(t.date, from, to));
       const total = sum(expenses);
       const byCat = new Map<string, Kopecks>();
-      for (const t of expenses) if (t.categoryId) byCat.set(t.categoryId, (byCat.get(t.categoryId) ?? 0) + t.amount);
+      for (const t of expenses)
+        if (t.categoryId) byCat.set(t.categoryId, (byCat.get(t.categoryId) ?? 0) + t.amount);
       const items = [...byCat.entries()]
         .map(([categoryId, amount]) => ({
           categoryId,
@@ -1092,7 +1311,8 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
       const incomes = db.transactions.filter((t) => t.type === 'income' && inRange(t.date, from, to));
       const total = sum(incomes);
       const bySrc = new Map<string, Kopecks>();
-      for (const t of incomes) bySrc.set(t.incomeSourceId ?? '', (bySrc.get(t.incomeSourceId ?? '') ?? 0) + t.amount);
+      for (const t of incomes)
+        bySrc.set(t.incomeSourceId ?? '', (bySrc.get(t.incomeSourceId ?? '') ?? 0) + t.amount);
       const items = [...bySrc.entries()]
         .map(([sourceId, amount]) => ({
           sourceId,
@@ -1128,9 +1348,18 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
       // В проде суммы здесь — текст Postgres SUM(...)::text: «1250.50», а пустые дни — «0».
       const pg = (k: number) => (k === 0 ? '0' : (k / 100).toFixed(2));
       const days: Array<{ day: string; income: string; expense: string; investment: string }> = [];
-      for (let d = new Date(from.getFullYear(), from.getMonth(), from.getDate()); d < to; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)) {
+      for (
+        let d = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+        d < to;
+        d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)
+      ) {
         const row = acc.get(localDay(d)) ?? { income: 0, expense: 0, investment: 0 };
-        days.push({ day: localDay(d), income: pg(row.income), expense: pg(row.expense), investment: pg(row.investment) });
+        days.push({
+          day: localDay(d),
+          income: pg(row.income),
+          expense: pg(row.expense),
+          investment: pg(row.investment),
+        });
       }
       return { from: from.toISOString(), to: to.toISOString(), days };
     },

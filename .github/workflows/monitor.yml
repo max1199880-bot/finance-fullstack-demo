@@ -1,0 +1,97 @@
+# Мониторинг прода: каждые 15 минут проверяет API (вместе с базой и Auth) и фронтенд.
+#
+# Алерт — issue с меткой «incident»: GitHub присылает о нём письмо владельцу репозитория,
+# а история сбоев остаётся в одном месте с кодом. Пока сбой продолжается, новые issue
+# не плодятся; когда прод восстановился, issue закрывается с итогом.
+#
+# Побочный, но полезный эффект: бесплатный проект Supabase засыпает после недели без
+# запросов, а регулярная проверка держит его активным.
+
+name: Monitor
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+concurrency:
+  group: monitor
+  cancel-in-progress: false
+
+env:
+  API_HEALTH: https://${{ vars.SUPABASE_PROJECT_REF }}.supabase.co/functions/v1/api/health
+  APP_URL: https://finance-fullstack-demo.vercel.app/
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Проверка
+        id: probe
+        run: |
+          problems=""
+
+          # Две попытки: одиночный сетевой сбой раннера — ещё не повод будить человека.
+          for attempt in 1 2; do
+            problems=""
+            body=$(curl -s -m 20 -w '\n%{http_code}' "$API_HEALTH" || true)
+            code=$(echo "$body" | tail -n1)
+            json=$(echo "$body" | sed '$d')
+            if [ "$code" != "200" ]; then
+              problems="${problems}API /health ответил ${code}: $(echo "$json" | head -c 400)\n"
+            fi
+
+            app_code=$(curl -s -m 20 -o /dev/null -w '%{http_code}' "$APP_URL" || echo "000")
+            if [ "$app_code" != "200" ]; then
+              problems="${problems}Фронтенд ответил ${app_code}\n"
+            fi
+
+            [ -z "$problems" ] && break
+            sleep 20
+          done
+
+          echo "Ответ API: $json"
+          if [ -n "$problems" ]; then
+            echo "status=down" >> "$GITHUB_OUTPUT"
+            # Случайный разделитель: фиксированный «EOF» можно было бы подсунуть в теле
+            # ответа и дописать произвольные outputs шага. printf '%b' — чтобы данные
+            # ответа не трактовались как строка формата.
+            d=$(openssl rand -hex 8)
+            { echo "details<<$d"; printf '%b' "$problems"; echo "$d"; } >> "$GITHUB_OUTPUT"
+          else
+            echo "status=up" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Алерт или закрытие инцидента
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          STATUS: ${{ steps.probe.outputs.status }}
+          DETAILS: ${{ steps.probe.outputs.details }}
+        run: |
+          gh label create incident --color B60205 --description "Сбой прода (мониторинг)" 2>/dev/null || true
+          open=$(gh issue list --label incident --state open --json number --jq '.[0].number')
+          now=$(date -u '+%Y-%m-%d %H:%M UTC')
+
+          if [ "$STATUS" = "down" ] && [ -z "$open" ]; then
+            gh issue create --label incident \
+              --title "Прод недоступен: $now" \
+              --body "$(printf 'Мониторинг обнаружил сбой в %s.\n\n```\n%s\n```\n\nПроверка: [запуск](%s)\n\nИнцидент закроется сам, когда прод снова ответит.' \
+                "$now" "$DETAILS" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID")"
+            exit 1
+          fi
+
+          if [ "$STATUS" = "down" ]; then
+            echo "Инцидент #$open уже открыт — новый не создаём"
+            exit 1
+          fi
+
+          if [ -n "$open" ]; then
+            gh issue close "$open" --comment "Прод снова отвечает ($now). Закрыто мониторингом."
+          fi
+          echo "Прод в порядке"
