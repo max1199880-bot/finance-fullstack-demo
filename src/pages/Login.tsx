@@ -226,7 +226,10 @@ export function LoginPage() {
 
         <p className="mt-8 text-[11px] text-ios-hint leading-snug text-center">
           Демо-аккаунт открыт для всех: данные в нём вымышленные, и их видят все, кто зашёл по этой кнопке.
-          Для своих расходов заведите отдельный аккаунт.
+          Для своих расходов заведите отдельный аккаунт.{' '}
+          <a href="/privacy.html" className="underline">
+            Политика конфиденциальности
+          </a>
         </p>
       </div>
     </div>

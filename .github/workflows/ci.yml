@@ -138,7 +138,9 @@ jobs:
   deploy:
     name: Деплой на прод
     needs: [quality, api-tests]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # DEPLOY_ENABLED — переменная репозитория: деплой включается, когда в окружении
+    # production заданы секреты. Без неё джоба пропускается, а не падает на пустых токенах.
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment:
