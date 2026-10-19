@@ -164,12 +164,12 @@ jobs:
         with:
           version: 2.121.0
 
+      # Пароль базы не нужен: по токену доступа CLI сам заводит временную роль для входа.
       # Сначала база: новая версия функции может рассчитывать на новые столбцы,
       # а старая версия переживёт добавленные — миграции у нас только добавляющие.
       - name: Миграции базы
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
           supabase link --project-ref "$SUPABASE_PROJECT_REF"
           supabase db push

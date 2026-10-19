@@ -74,7 +74,6 @@ push в любую ветку / pull request
 | Имя | Тип | Откуда |
 |---|---|---|
 | `SUPABASE_ACCESS_TOKEN` | секрет окружения | Supabase → Account → Access Tokens |
-| `SUPABASE_DB_PASSWORD` | секрет окружения | Supabase → Database → Settings |
 | `VERCEL_TOKEN` | секрет окружения | Vercel → Account → Tokens |
 | `SUPABASE_PROJECT_REF`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | переменные репозитория | идентификаторы, не секреты |
 | `DEPLOY_ENABLED` | переменная репозитория | `true` включает джобу деплоя. Пока секретов нет, джоба пропускается, а не падает на пустых токенах |
