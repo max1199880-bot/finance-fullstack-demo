@@ -30,7 +30,8 @@ permissions:
   contents: read
 
 env:
-  NODE_VERSION: '20'
+  # 22, не 20: supabase-js в скриптах и тестах требует встроенный WebSocket, он есть с Node 22.
+  NODE_VERSION: '22'
   DENO_VERSION: '2.x'
 
 jobs:

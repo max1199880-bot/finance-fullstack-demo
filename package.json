@@ -54,5 +54,8 @@
     "vitest": "^3.2.4",
     "workbox-window": "^7.4.1"
   },
-  "description": "Демо-версия фронтенда «Финансы» (Telegram Mini App) на вымышленных данных — ДЗ «Frontend-приложение с AI-агентом»"
+  "description": "Демо-версия фронтенда «Финансы» (Telegram Mini App) на вымышленных данных — ДЗ «Frontend-приложение с AI-агентом»",
+  "engines": {
+    "node": ">=22"
+  }
 }

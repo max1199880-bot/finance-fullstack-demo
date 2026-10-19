@@ -85,17 +85,12 @@ export const byNameRu = <T extends { name: string }>(a: T, b: T) => a.name.local
 export async function balancesOf(ctx: Ctx, accountIds: string[]): Promise<Map<string, Kopecks>> {
   const out = new Map<string, Kopecks>();
   if (!accountIds.length) return out;
-  const { data, error } = await ctx.db
-    .from('account_balances')
-    .select('account_id, balance')
-    .in('account_id', accountIds)
-    // Текущий остаток — последняя записанная строка (seq), а не последняя по дате:
-    // дата — момент начала запроса, и при параллельных запросах порядок дат не совпадает
-    // с порядком записи (см. миграцию security_hardening, B-3).
-    .order('seq', { ascending: false });
+  // По одной строке на счёт выбирает база (функция current_balances): тянуть сюда всю
+  // историю остатков ради последнего значения — лишний трафик, растущий с каждой операцией.
+  const { data, error } = await ctx.db.rpc('current_balances', { p_account_ids: accountIds });
   if (error) throw new Error(error.message);
   for (const row of rowsOf<{ account_id: string; balance: string }>(data)) {
-    if (!out.has(row.account_id)) out.set(row.account_id, fromDb(row.balance));
+    out.set(row.account_id, fromDb(row.balance));
   }
   for (const id of accountIds) if (!out.has(id)) out.set(id, 0);
   return out;
