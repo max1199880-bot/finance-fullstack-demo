@@ -13,6 +13,11 @@ on:
   schedule:
     - cron: '*/15 * * * *'
   workflow_dispatch:
+    inputs:
+      simulate_outage:
+        description: 'Проверка алерта: опросить несуществующий адрес и открыть инцидент'
+        type: boolean
+        default: false
 
 permissions:
   issues: write
@@ -23,7 +28,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  API_HEALTH: https://${{ vars.SUPABASE_PROJECT_REF }}.supabase.co/functions/v1/api/health
+  # При проверке алерта опрашиваем заведомо несуществующий путь — прод при этом не трогаем.
+  API_HEALTH: https://${{ vars.SUPABASE_PROJECT_REF }}.supabase.co/functions/v1/api/${{ inputs.simulate_outage && 'health-simulated-outage' || 'health' }}
   APP_URL: https://finance-fullstack-demo.vercel.app/
 
 jobs:
