@@ -413,9 +413,17 @@ export const api = {
     type?: string;
     accountId?: string;
     accountType?: string;
+    /** Поиск по комментарию и названию категории/источника дохода (до 100 символов). */
+    q?: string;
+    categoryId?: string;
+    /** Сколько операций пропустить — для «Показать ещё». */
+    offset?: number;
   }) => {
     const qs = new URLSearchParams();
     if (params?.limit) qs.set('limit', String(params.limit));
+    if (params?.offset) qs.set('offset', String(params.offset));
+    if (params?.q) qs.set('q', params.q);
+    if (params?.categoryId) qs.set('categoryId', params.categoryId);
     if (params?.from) qs.set('from', params.from);
     if (params?.to) qs.set('to', params.to);
     if (params?.type) qs.set('type', params.type);

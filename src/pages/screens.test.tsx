@@ -324,3 +324,140 @@ describe('Ошибки загрузки на экранах', () => {
     expect(screen.queryByText('Операций нет')).not.toBeInTheDocument();
   });
 });
+
+describe('История операций: поиск, категория, «Показать ещё»', () => {
+  /** Адреса запросов к списку операций — по ним видно, что именно ушло на сервер. */
+  function spyOnTransactionRequests(): string[] {
+    const urls: string[] = [];
+    const real = globalThis.fetch;
+    vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes('/api/transactions?')) urls.push(url);
+      return real(input, init);
+    });
+    return urls;
+  }
+
+  async function openHistory(user: ReturnType<typeof userEvent.setup>) {
+    renderScreen(<HomePage onGoTo={vi.fn()} />);
+    await screen.findByText(/Расход за сен 2026/);
+    await user.click(screen.getByRole('button', { name: /Все/ }));
+    await screen.findByRole('textbox', { name: 'Поиск операций' });
+  }
+
+  // Строки операций в шторке (у них tabindex=0); строки Главной за шторкой не считаем.
+  const rows = () =>
+    within(screen.getByRole('dialog'))
+      .queryAllByRole('button')
+      .filter((el) => el.getAttribute('tabindex') === '0');
+
+  it('поиск идёт на сервер с паузой: быстрый набор — один запрос, список сужается, «✕» возвращает всё', async () => {
+    const user = userEvent.setup();
+    const urls = spyOnTransactionRequests();
+    await openHistory(user);
+    await waitFor(() => expect(rows().length).toBeGreaterThan(2));
+    const before = rows().length;
+    urls.length = 0;
+
+    await user.type(screen.getByRole('textbox', { name: 'Поиск операций' }), 'такси');
+    await waitFor(() => expect(rows()).toHaveLength(2));
+    expect(
+      rows()
+        .map((r) => r.textContent)
+        .join(' '),
+    ).toMatch(/Такси до офиса/);
+    // Пять букв набраны подряд — на сервер ушёл один запрос с полным словом, а не пять.
+    expect(urls.filter((u) => u.includes('q='))).toHaveLength(1);
+    expect(urls.at(-1)).toContain('q=%D1%82%D0%B0%D0%BA%D1%81%D0%B8');
+
+    await user.click(screen.getByRole('button', { name: 'Очистить поиск' }));
+    expect(screen.getByRole('textbox', { name: 'Поиск операций' })).toHaveValue('');
+    await waitFor(() => expect(rows()).toHaveLength(before));
+  });
+
+  it('поиск находит и по названию категории', async () => {
+    const user = userEvent.setup();
+    await openHistory(user);
+    await user.type(screen.getByRole('textbox', { name: 'Поиск операций' }), 'транспорт');
+    // В сентябре у «Транспорта» три расхода: два с комментарием «Такси…» и один без.
+    await waitFor(() => expect(rows()).toHaveLength(3));
+  });
+
+  it('фильтр по категории уходит на сервер как categoryId', async () => {
+    const user = userEvent.setup();
+    const urls = spyOnTransactionRequests();
+    await openHistory(user);
+    await user.click(screen.getByRole('button', { name: 'Расходы' }));
+    // Чип категории — кнопка без tabindex; строки операций с тем же словом отсекаем по нему.
+    const chip = (name: RegExp) =>
+      within(screen.getByRole('dialog'))
+        .getAllByRole('button', { name })
+        .find((el) => el.getAttribute('tabindex') === null);
+    await waitFor(() => expect(chip(/Транспорт/)).toBeDefined());
+    await user.click(chip(/Транспорт/)!);
+
+    await waitFor(() => expect(urls.at(-1)).toContain('categoryId=cat-1'));
+    await waitFor(() => expect(rows()).toHaveLength(3));
+    // Чипы категорий остаются на месте: выбор не схлопывает их до одной выбранной.
+    expect(chip(/Продукты/)).toBeDefined();
+  });
+
+  it('ничего не найдено — подсказка и «Сбросить фильтры» возвращает список', async () => {
+    const user = userEvent.setup();
+    await openHistory(user);
+    await waitFor(() => expect(rows().length).toBeGreaterThan(2));
+    const before = rows().length;
+
+    await user.type(screen.getByRole('textbox', { name: 'Поиск операций' }), 'zzzzzz');
+    expect(await screen.findByText('Ничего не найдено')).toBeInTheDocument();
+    expect(screen.getByText(/сбросить фильтры/)).toBeInTheDocument();
+    expect(screen.queryByText('Операций нет')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Сбросить фильтры' }));
+    expect(screen.getByRole('textbox', { name: 'Поиск операций' })).toHaveValue('');
+    await waitFor(() => expect(rows()).toHaveLength(before));
+  });
+
+  it('«Показать ещё» подгружает следующую страницу по offset, пока список не закончится', async () => {
+    const user = userEvent.setup();
+    const urls = spyOnTransactionRequests();
+    await openHistory(user);
+    await user.click(screen.getByRole('button', { name: 'Всё' }));
+
+    const total = store.db.transactions.length;
+    expect(total).toBeGreaterThan(100);
+    expect(await screen.findByText('Показано 100')).toBeInTheDocument();
+    expect(rows()).toHaveLength(100);
+
+    await user.click(screen.getByRole('button', { name: 'Показать ещё' }));
+    expect(await screen.findByText(`${total} операций`)).toBeInTheDocument();
+    expect(rows()).toHaveLength(total);
+    expect(urls.at(-1)).toContain('offset=100');
+    expect(screen.queryByRole('button', { name: 'Показать ещё' })).not.toBeInTheDocument();
+  });
+
+  it('ошибка поиска — заглушка с «Повторить», а не «Операций нет»', async () => {
+    const user = userEvent.setup();
+    await openHistory(user);
+    await waitFor(() => expect(rows().length).toBeGreaterThan(2));
+
+    network.down = true;
+    await user.type(screen.getByRole('textbox', { name: 'Поиск операций' }), 'кино');
+    expect(await screen.findByText('Не удалось загрузить данные')).toBeInTheDocument();
+    expect(screen.queryByText(/Ничего не найдено|Операций нет/)).not.toBeInTheDocument();
+
+    network.down = false;
+    await user.click(screen.getByRole('button', { name: 'Повторить' }));
+    await waitFor(() => expect(rows()).toHaveLength(1));
+  });
+
+  it('демо-сервер повторяет контракт: слишком длинный q и мусорный categoryId — 400', async () => {
+    const { handleApiRequest } = await import('../demo/server');
+    const get = (qs: string) =>
+      handleApiRequest(store, 'GET', new URL(`http://localhost/api/transactions?${qs}`), undefined);
+    expect((await get(`q=${'я'.repeat(101)}`)).status).toBe(400);
+    expect((await get('categoryId=a,b')).status).toBe(400);
+    expect((await get('q=%25')).status).toBe(200);
+    expect(await (await get('q=%25')).json()).toEqual([]);
+  });
+});

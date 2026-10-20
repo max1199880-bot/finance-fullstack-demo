@@ -1,5 +1,5 @@
 import { Fragment, useState, useMemo, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, type TransactionDTO } from '../lib/api';
 import { Header } from '../components/Header';
 import { Card, ListRow } from '../components/Card';
@@ -376,6 +376,13 @@ function periodApiDates(p: TxPeriod, from: string, to: string): { from?: string;
   return {};
 }
 
+// Размер страницы ленты: «Показать ещё» подгружает следующую порцию через offset.
+const TX_PAGE_SIZE = 100;
+// Пауза после последней буквы, прежде чем отправить поиск на сервер: иначе каждое
+// нажатие клавиши было бы отдельным запросом.
+const SEARCH_DEBOUNCE_MS = 300;
+const MAX_SEARCH_LENGTH = 100;
+
 function AllTransactionsSheet({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
   const [period, setPeriod] = useState<TxPeriod>('cur');
@@ -384,41 +391,65 @@ function AllTransactionsSheet({ onClose }: { onClose: () => void }) {
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
   const [editingTx, setEditingTx] = useState<TransactionDTO | null>(null);
+  // `search` — то, что набрано в поле; `query` — то, что уходит на сервер (после паузы).
+  const [search, setSearch] = useState('');
+  const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    const id = setTimeout(() => setQuery(search.trim()), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(id);
+  }, [search]);
 
   const apiParams = useMemo(() => {
     const dates = periodApiDates(period, customFrom, customTo);
-    const p: Parameters<typeof api.transactions>[0] = { limit: 300 };
+    const p: Parameters<typeof api.transactions>[0] = {};
     if (dates.from) p.from = dates.from;
     if (dates.to) p.to = dates.to;
     if (txType === 'investment') p.type = 'transfer_to_investment';
     else if (txType === 'other_asset') p.accountType = 'other_asset';
     else if (txType !== 'all') p.type = txType;
+    if (categoryId) p.categoryId = categoryId;
+    if (query) p.q = query;
     return p;
-  }, [period, txType, customFrom, customTo]);
+  }, [period, txType, customFrom, customTo, categoryId, query]);
 
-  const txQuery = useQuery({
-    queryKey: ['txs-all', apiParams],
-    queryFn: () => api.transactions(apiParams),
+  const txQuery = useInfiniteQuery({
+    // 'paged' — отдельная форма данных (страницы), чтобы старый сохранённый кеш плоского
+    // списка под этим ключом не принимали за страницы.
+    queryKey: ['txs-all', 'paged', apiParams],
+    queryFn: ({ pageParam }) => api.transactions({ ...apiParams, limit: TX_PAGE_SIZE, offset: pageParam }),
+    initialPageParam: 0,
+    // Полная страница — значит, дальше могут быть ещё; неполная — это конец списка.
+    getNextPageParam: (last, pages) =>
+      last.length === TX_PAGE_SIZE ? pages.length * TX_PAGE_SIZE : undefined,
     enabled: period !== 'custom' || (!!customFrom && !!customTo),
     staleTime: 30_000,
   });
 
-  const categories = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const tx of txQuery.data ?? []) {
-      if (tx.categoryId && tx.categoryName) map.set(tx.categoryId, tx.categoryName);
-    }
-    return Array.from(map, ([id, name]) => ({ id, name }));
-  }, [txQuery.data]);
+  // Категории для чипов берём из справочника, а не из загруженных операций: фильтр уходит
+  // на сервер, и после выбора категории в выдаче осталась бы только она одна.
+  const catsQuery = useQuery({
+    queryKey: ['cats', 'expense'],
+    queryFn: api.expenseCategories,
+    enabled: txType === 'expense',
+    staleTime: 5 * 60_000,
+  });
+  const categories = catsQuery.data ?? [];
 
   useEffect(() => {
     setCategoryId(null);
   }, [txType]);
 
-  const displayed = useMemo(() => {
-    const all = txQuery.data ?? [];
-    return categoryId ? all.filter((tx) => tx.categoryId === categoryId) : all;
-  }, [txQuery.data, categoryId]);
+  const displayed = useMemo(() => txQuery.data?.pages.flat() ?? [], [txQuery.data]);
+  const hasMore = txQuery.hasNextPage;
+  const filtersActive = query !== '' || categoryId !== null || txType !== 'all';
+
+  const resetFilters = () => {
+    setSearch('');
+    setQuery('');
+    setTxType('all');
+    setCategoryId(null);
+  };
 
   const totals = useMemo(() => {
     let income = 0,
@@ -436,6 +467,34 @@ function AllTransactionsSheet({ onClose }: { onClose: () => void }) {
         <div className="pb-6">
           {/* Sticky filters */}
           <div className="sticky top-0 bg-ios-bg z-10 px-4 pt-1 pb-3 space-y-2 border-b border-ios-divider">
+            <div className="relative">
+              <input
+                type="text"
+                inputMode="search"
+                enterKeyHint="search"
+                value={search}
+                maxLength={MAX_SEARCH_LENGTH}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Поиск по комментарию и категории"
+                aria-label="Поиск операций"
+                className="w-full bg-ios-surface rounded-ios pl-3 pr-9 py-2 text-sm text-ios-text placeholder:text-ios-hint"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    haptic('light');
+                    // Очистка применяется сразу, без паузы: пользователь ждёт полный список.
+                    setSearch('');
+                    setQuery('');
+                  }}
+                  aria-label="Очистить поиск"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-ios-hint active:opacity-60"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
             <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
               {PERIOD_CHIPS.map((c) => (
                 <TxFilterChip key={c.value} active={period === c.value} onClick={() => setPeriod(c.value)}>
@@ -491,11 +550,12 @@ function AllTransactionsSheet({ onClose }: { onClose: () => void }) {
               <span>Загрузка…</span>
             ) : loadFailure(txQuery) ? null : (
               <>
-                <span>{displayed.length} операций</span>
-                {totals.income > 0 && (
+                <span>{hasMore ? `Показано ${displayed.length}` : `${displayed.length} операций`}</span>
+                {/* Суммы — только когда загружено всё: по части списка они выглядели бы итогом. */}
+                {!hasMore && totals.income > 0 && (
                   <span className="text-ios-green">+{fmtRub(String(totals.income), { compact: true })}</span>
                 )}
-                {totals.expense > 0 && (
+                {!hasMore && totals.expense > 0 && (
                   <span className="text-ios-red">−{fmtRub(String(totals.expense), { compact: true })}</span>
                 )}
               </>
@@ -512,7 +572,26 @@ function AllTransactionsSheet({ onClose }: { onClose: () => void }) {
           ) : loadFailure(txQuery) ? (
             <LoadError query={txQuery} compact />
           ) : displayed.length === 0 ? (
-            <div className="py-12 text-center text-ios-hint text-sm">Операций нет</div>
+            filtersActive ? (
+              <div className="px-6 py-12 text-center">
+                <div className="text-ios-text font-medium">Ничего не найдено</div>
+                <p className="mt-1 text-sm text-ios-hint leading-snug">
+                  Попробуйте изменить запрос или сбросить фильтры.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    haptic('light');
+                    resetFilters();
+                  }}
+                  className="mt-4 px-5 py-2.5 rounded-ios bg-ios-surface text-ios-accent font-medium active:opacity-70 select-none-ui"
+                >
+                  Сбросить фильтры
+                </button>
+              </div>
+            ) : (
+              <div className="py-12 text-center text-ios-hint text-sm">Операций нет</div>
+            )
           ) : (
             <div>
               {displayed.map((tx, i) => {
@@ -559,6 +638,26 @@ function AllTransactionsSheet({ onClose }: { onClose: () => void }) {
                   </Fragment>
                 );
               })}
+              {hasMore && (
+                <div className="px-4 pt-3 text-center">
+                  {/* Ошибка догрузки не прячет уже показанные операции — только меняет подпись кнопки. */}
+                  <button
+                    type="button"
+                    disabled={txQuery.isFetchingNextPage}
+                    onClick={() => {
+                      haptic('light');
+                      txQuery.fetchNextPage();
+                    }}
+                    className="w-full py-3 rounded-ios bg-ios-surface text-ios-accent font-medium active:opacity-70 disabled:opacity-60 select-none-ui"
+                  >
+                    {txQuery.isFetchingNextPage
+                      ? 'Загружаю…'
+                      : txQuery.isFetchNextPageError
+                        ? 'Не удалось загрузить — повторить'
+                        : 'Показать ещё'}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

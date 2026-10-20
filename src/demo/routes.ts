@@ -513,16 +513,33 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
     /^\/api\/transactions$/,
     ({ db, q }): TransactionDTO[] => {
       const limit = Math.min(Number.parseInt(q.get('limit') ?? '20', 10) || 20, 500);
+      const offset = Math.min(Math.max(Number.parseInt(q.get('offset') ?? '0', 10) || 0, 0), 100_000);
       const type = q.get('type');
       const accountId = q.get('accountId');
       const accountType = q.get('accountType');
+      const categoryId = q.get('categoryId');
+      const search = (q.get('q') ?? '').trim().toLowerCase();
       const from = q.get('from') ? new Date(q.get('from') as string) : null;
       const to = q.get('to') ? new Date(q.get('to') as string) : null;
       const typeOf = (id: string | null) => findAccount(db, id)?.type;
+      // Как на сервере прода: слишком длинный q и категория не-идентификатор — 400.
+      // Идентификаторы демо («cat-0») не UUID, поэтому проверяем только алфавит и длину.
+      if (search.length > 100) fail(400, 'Поиск не длиннее 100 символов');
+      if (categoryId !== null && !/^[\w-]{1,64}$/.test(categoryId)) fail(400, 'Invalid categoryId');
+      // Поиск — по подстроке без учёта регистра в комментарии, названии категории или источника.
+      // Подстановочных знаков нет: «%» ищется как «%», так же, как после экранирования на сервере.
+      const matchesText = (t: Transaction) =>
+        [
+          t.comment,
+          db.categories.find((c) => c.id === t.categoryId)?.name,
+          db.incomeSources.find((s) => s.id === t.incomeSourceId)?.name,
+        ].some((v) => v?.toLowerCase().includes(search));
       return [...db.transactions]
         .filter((t) => !from || new Date(t.date) >= from)
         .filter((t) => !to || new Date(t.date) < to)
         .filter((t) => !type || t.type === type)
+        .filter((t) => !categoryId || t.categoryId === categoryId)
+        .filter((t) => !search || matchesText(t))
         .filter((t) =>
           accountId
             ? t.fromAccountId === accountId || t.toAccountId === accountId
@@ -531,7 +548,7 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
               typeOf(t.toAccountId) === accountType,
         )
         .sort(byDateDesc)
-        .slice(0, limit)
+        .slice(offset, offset + limit)
         .map((t) => txDTO(db, t));
     },
   ],

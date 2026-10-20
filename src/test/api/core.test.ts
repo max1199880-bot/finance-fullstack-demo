@@ -247,3 +247,168 @@ describe('Капитал', () => {
     expect((res.body as { error: string }).error).toBe('Аккаунт с таким именем уже существует');
   });
 });
+
+describe('Поиск и фильтры операций', () => {
+  interface Tx {
+    id: string;
+    comment: string | null;
+    categoryId: string | null;
+    categoryName: string | null;
+    incomeSourceName: string | null;
+  }
+  let me: Client;
+  let stranger: Client;
+  let cafe: Category;
+  let transport: Category;
+  let milk: Tx;
+  let discount: Tx;
+  let taxi: Tx;
+  let salary: Tx;
+
+  // Без limit по умолчанию отдаётся 20 операций — для четырёх записей этого хватает.
+  const find = (client: Client, query: string) => ok<Tx[]>(client, 'GET', `/transactions?${query}`);
+  const ids = (list: Tx[]) => list.map((t) => t.id).sort();
+
+  beforeAll(async () => {
+    me = await createUser('search');
+    stranger = await createUser('stranger');
+    const accounts = await ok<Account[]>(me, 'GET', '/accounts');
+    const wallet = accounts.find((a) => a.type === 'cash')!;
+    cafe = {
+      id: (await ok<{ id: string }>(me, 'POST', '/categories', { name: 'Кофейни', type: 'expense' })).id,
+      name: 'Кофейни',
+    };
+    transport = (await ok<Category[]>(me, 'GET', '/categories?type=expense')).find(
+      (c) => c.name === 'Транспорт',
+    )!;
+    const source = await ok<{ id: string }>(me, 'POST', '/income-sources', { name: 'Зарплата Альфа' });
+
+    const expense = (categoryId: string, comment: string | null) =>
+      ok<Tx>(me, 'POST', '/transactions', {
+        type: 'expense',
+        categoryId,
+        fromAccountId: wallet.id,
+        amount: '100',
+        comment,
+      });
+    milk = await expense(cafe.id, 'Молоко и хлеб');
+    discount = await expense(cafe.id, 'Скидка 50% по карте');
+    taxi = await expense(transport.id, 'такси домой');
+    salary = await ok<Tx>(me, 'POST', '/transactions', {
+      type: 'income',
+      incomeSourceId: source.id,
+      toAccountId: wallet.id,
+      amount: '5000',
+    });
+
+    // Чужая операция с тем же словом: ни в какой выдаче «меня» её быть не должно.
+    const otherAccounts = await ok<Account[]>(stranger, 'GET', '/accounts');
+    const otherCats = await ok<Category[]>(stranger, 'GET', '/categories?type=expense');
+    await ok(stranger, 'POST', '/transactions', {
+      type: 'expense',
+      categoryId: otherCats[0].id,
+      fromAccountId: otherAccounts.find((a) => a.type === 'cash')!.id,
+      amount: '100',
+      comment: 'Молоко соседа',
+    });
+  });
+
+  it('q ищет по комментарию без учёта регистра', async () => {
+    expect(ids(await find(me, `q=${encodeURIComponent('МОЛОКО')}`))).toEqual([milk.id]);
+    expect(ids(await find(me, `q=${encodeURIComponent('такси')}`))).toEqual([taxi.id]);
+  });
+
+  it('q ищет и по названию категории, и по названию источника дохода', async () => {
+    expect(ids(await find(me, `q=${encodeURIComponent('кофей')}`))).toEqual(ids([milk, discount]));
+    expect(ids(await find(me, `q=${encodeURIComponent('альфа')}`))).toEqual([salary.id]);
+  });
+
+  it('% и _ в q — обычные символы, а не подстановочные знаки', async () => {
+    // Без экранирования «%» совпал бы с каждой операцией, а «_» — с любой непустой строкой.
+    expect(ids(await find(me, `q=${encodeURIComponent('%')}`))).toEqual([discount.id]);
+    expect(ids(await find(me, `q=${encodeURIComponent('50%')}`))).toEqual([discount.id]);
+    expect(await find(me, `q=${encodeURIComponent('_')}`)).toEqual([]);
+    expect(await find(me, `q=${encodeURIComponent('\\')}`)).toEqual([]);
+  });
+
+  it('запятые, скобки и кавычки в q не ломают запрос', async () => {
+    for (const q of ['a,b', 'x)', '(y', '"z"', 'c.eq.1', 'comment.ilike.%,id.neq.0']) {
+      const res = await api<Tx[]>(me, 'GET', `/transactions?q=${encodeURIComponent(q)}`);
+      expect(res.status, q).toBe(200);
+      expect(res.body, q).toEqual([]);
+    }
+  });
+
+  it('чужие операции не находятся', async () => {
+    const mine = await find(me, `q=${encodeURIComponent('молоко')}`);
+    expect(mine.map((t) => t.comment)).toEqual(['Молоко и хлеб']);
+    const theirs = await find(stranger, `q=${encodeURIComponent('молоко')}`);
+    expect(theirs.map((t) => t.comment)).toEqual(['Молоко соседа']);
+  });
+
+  it('q не длиннее 100 символов: 100 принимается, 101 — 400', async () => {
+    expect((await api(me, 'GET', `/transactions?q=${'я'.repeat(100)}`)).status).toBe(200);
+    const res = await api(me, 'GET', `/transactions?q=${'я'.repeat(101)}`);
+    expect(res.status).toBe(400);
+    expect((res.body as { error: string }).error).toBe('Поиск не длиннее 100 символов');
+  });
+
+  it('пустой q (одни пробелы) — как будто параметра нет', async () => {
+    const all = await find(me, '');
+    expect(ids(await find(me, 'q=%20%20'))).toEqual(ids(all));
+  });
+
+  it('categoryId оставляет операции только этой категории', async () => {
+    expect(ids(await find(me, `categoryId=${cafe.id}`))).toEqual(ids([milk, discount]));
+    expect(ids(await find(me, `categoryId=${transport.id}`))).toEqual([taxi.id]);
+  });
+
+  it('categoryId вместе с q и type сужает выдачу, а не расширяет', async () => {
+    const q = encodeURIComponent('молоко');
+    expect(ids(await find(me, `categoryId=${cafe.id}&q=${q}&type=expense`))).toEqual([milk.id]);
+    expect(await find(me, `categoryId=${transport.id}&q=${q}`)).toEqual([]);
+    expect(await find(me, `categoryId=${cafe.id}&type=income`)).toEqual([]);
+
+    // Период тоже сужает поисковую выдачу: фильтры навешиваются поверх результата поиска.
+    const future = encodeURIComponent(new Date(Date.now() + 86_400_000).toISOString());
+    expect(await find(me, `q=${q}&from=${future}`)).toEqual([]);
+    expect(ids(await find(me, `q=${q}&to=${future}`))).toEqual([milk.id]);
+  });
+
+  it('чужая или несуществующая категория даёт пустой список, а не чужие данные', async () => {
+    const theirCats = await ok<Category[]>(stranger, 'GET', '/categories?type=expense');
+    expect(await find(me, `categoryId=${theirCats[0].id}`)).toEqual([]);
+    expect(await find(me, `categoryId=${crypto.randomUUID()}`)).toEqual([]);
+  });
+
+  it('невалидный categoryId — 400', async () => {
+    for (const bad of ['abc', '123', `${cafe.id}x`, `${cafe.id},id.neq.0`, '']) {
+      const res = await api(me, 'GET', `/transactions?categoryId=${encodeURIComponent(bad)}`);
+      expect(res.status, bad).toBe(400);
+      expect((res.body as { error: string }).error).toBe('Invalid categoryId');
+    }
+  });
+
+  it('offset листает страницы без повторов и пропусков, в том числе с поиском', async () => {
+    const all = await find(me, '');
+    expect(all).toHaveLength(4);
+
+    const first = await find(me, 'limit=3');
+    const second = await find(me, 'limit=3&offset=3');
+    expect(second).toHaveLength(1);
+    expect([...first, ...second].map((t) => t.id)).toEqual(all.map((t) => t.id));
+    expect(await find(me, 'limit=3&offset=4')).toEqual([]);
+
+    const q = encodeURIComponent('кофе');
+    const p1 = await find(me, `q=${q}&limit=1`);
+    const p2 = await find(me, `q=${q}&limit=1&offset=1`);
+    expect(ids([...p1, ...p2])).toEqual(ids([milk, discount]));
+    expect(await find(me, `q=${q}&limit=1&offset=2`)).toEqual([]);
+  });
+
+  it('offset: мусор и отрицательное значение не ломают запрос', async () => {
+    const all = await find(me, '');
+    expect((await find(me, 'offset=-5')).map((t) => t.id)).toEqual(all.map((t) => t.id));
+    expect((await find(me, 'offset=abc')).map((t) => t.id)).toEqual(all.map((t) => t.id));
+  });
+});

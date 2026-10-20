@@ -23,6 +23,7 @@ import {
   txDTO,
   type TxRow,
   type TxType,
+  UUID_RE,
 } from '../lib/shared.ts';
 
 /** Служебная категория быстрого списания: создаётся при первом обращении к POST /loss. */
@@ -49,6 +50,11 @@ const ACCOUNT_TYPES: readonly AccountType[] = [
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** Длиннее поисковая строка не нужна: это комментарий или название, а не документ. */
+const MAX_SEARCH_LENGTH = 100;
+/** Потолок смещения: глубже листать ленту операций некому, а огромный offset — зря нагрузка на базу. */
+const MAX_OFFSET = 100_000;
+
 // Клиент базы работает без сгенерированных типов и не выводит форму строки из
 // перечисления полей. Приведение собрано в двух функциях, чтобы не рассыпать его по файлу.
 const asTxRow = (data: unknown): TxRow => data as TxRow;
@@ -73,6 +79,19 @@ function dateParam(url: URL, key: string): string | null {
   const d = new Date(raw);
   if (Number.isNaN(d.getTime())) throw badRequest('Invalid date');
   return d.toISOString();
+}
+
+/**
+ * Поисковая строка из query: null, если её нет (или одни пробелы). Слишком длинную строку
+ * и NUL-символ отклоняем: Postgres не хранит \u0000 в тексте и ответил бы ошибкой запроса,
+ * то есть 500 вместо понятного 400.
+ */
+function searchParam(url: URL): string | null {
+  const raw = url.searchParams.get('q')?.trim();
+  if (!raw) return null;
+  if (raw.length > MAX_SEARCH_LENGTH) throw badRequest(`Поиск не длиннее ${MAX_SEARCH_LENGTH} символов`);
+  if (raw.includes('\u0000')) throw badRequest('Invalid q');
+  return raw;
 }
 
 // ── проверки справочников ──────────────────────────────────────────────────
@@ -220,24 +239,46 @@ async function lossCategoryId(ctx: Ctx): Promise<string> {
 }
 
 export const routes: Route[] = [
-  // Список операций: лента на главной, история счёта и выгрузки за период.
+  // Список операций: лента на главной, история счёта, поиск и выгрузки за период.
+  // Параметры: from/to/type/accountId/accountType, поиск q (комментарий или название
+  // категории/источника), categoryId, постраничность limit + offset.
   {
     method: 'GET',
     path: '/transactions',
     handler: async (ctx) => {
       const limit = clampedInt(ctx.url.searchParams.get('limit'), 20, 1, 500);
+      const offset = clampedInt(ctx.url.searchParams.get('offset'), 0, 0, MAX_OFFSET);
       const from = dateParam(ctx.url, 'from');
       const to = dateParam(ctx.url, 'to');
       const type = ctx.url.searchParams.get('type');
       const accountId = ctx.url.searchParams.get('accountId');
       const accountType = ctx.url.searchParams.get('accountType');
+      const categoryId = ctx.url.searchParams.get('categoryId');
+      const search = searchParam(ctx.url);
+
+      // Фильтр по категории — единственный из старых и новых, где мусор даёт 400, а не []:
+      // это новый параметр, и тихий пустой ответ скрыл бы ошибку клиента.
+      if (categoryId !== null && !UUID_RE.test(categoryId)) throw badRequest('Invalid categoryId');
 
       if (type && !TX_TYPES.includes(type as TxType)) return [];
 
-      let q = ctx.db.from('transactions').select(TX_FIELDS);
+      // С текстом читаем через search_transactions (см. миграцию): текст идёт параметром
+      // функции, а не строкой фильтра. Без текста — обычная таблица, чтобы лента на главной
+      // по-прежнему шла по индексу (user_id, date).
+      //
+      // Типы supabase-js считают результат rpc().select() «только для сортировки», хотя
+      // PostgREST принимает на нём те же фильтры, что и на таблице. Поэтому приводим к
+      // типу табличного запроса: строка ответа и методы фильтрации у них общие.
+      const table = ctx.db.from('transactions').select(TX_FIELDS);
+      let q = search
+        ? (ctx.db
+            .rpc('search_transactions', { p_query: search })
+            .select(TX_FIELDS) as unknown as typeof table)
+        : table;
       if (from) q = q.gte('date', from);
       if (to) q = q.lt('date', to);
       if (type) q = q.eq('type', type);
+      if (categoryId) q = q.eq('category_id', categoryId);
 
       if (accountId) {
         // Счёт подходит и как источник, и как получатель: в истории счёта нужны обе стороны.
@@ -254,7 +295,12 @@ export const routes: Route[] = [
       }
 
       const [rows, names] = await Promise.all([
-        q.order('date', { ascending: false }).limit(limit),
+        // id вторым ключом: у операций бывает одинаковая дата, и без него страницы по offset
+        // могли бы дублировать строки или пропускать их на стыке.
+        q
+          .order('date', { ascending: false })
+          .order('id', { ascending: false })
+          .range(offset, offset + limit - 1),
         nameMaps(ctx),
       ]);
       if (rows.error) throw new Error(rows.error.message);
