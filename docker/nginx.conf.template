@@ -1,0 +1,38 @@
+# nginx для собранного фронтенда. Повторяет то, что на проде делает vercel.json:
+# маршруты SPA, кеширование и заголовки безопасности. ${SUPABASE_URL} подставляет
+# образ nginx при старте контейнера (envsubst по /etc/nginx/templates → conf.d).
+
+server {
+    listen 8080;
+    server_name _;
+    root /usr/share/nginx/html;
+    server_tokens off;
+
+    include /etc/nginx/conf.d/security-headers.inc;
+
+    # Проверка живости контейнера (HEALTHCHECK в Dockerfile).
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    # Файлы с хешем в имени не меняются никогда — кешируем на год.
+    location /assets/ {
+        include /etc/nginx/conf.d/security-headers.inc;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        try_files $uri =404;
+    }
+
+    # Сервис-воркер должен обновляться сразу, иначе пользователи застрянут на старой версии.
+    location = /sw.js {
+        include /etc/nginx/conf.d/security-headers.inc;
+        add_header Cache-Control "no-cache";
+        try_files $uri =404;
+    }
+
+    # Маршруты приложения (/budget, /capital…) отдают index.html — дальше решает React Router.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

@@ -1,0 +1,35 @@
+# Фронтенд в контейнере поверх локального Supabase.
+#
+# Бэкенд (PostgreSQL, Auth, Edge Function) поднимает Supabase CLI — тоже в Docker:
+#   npx supabase start                         # база, Auth, шлюз на 127.0.0.1:54321
+#   npx supabase functions serve --env-file supabase/functions/.env
+#   npm run seed:demo                          # демо-аккаунт с данными
+# Затем фронтенд:
+#   docker compose --env-file .env.local up --build
+#   → http://localhost:8080
+#
+# Браузер ходит в Supabase напрямую, поэтому адрес — с точки зрения хоста (127.0.0.1),
+# а не имя контейнера.
+
+services:
+  web:
+    build:
+      context: .
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:?нужен VITE_SUPABASE_URL (см. .env.example)}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:?нужен VITE_SUPABASE_ANON_KEY}
+        VITE_DEMO_PASSWORD: ${VITE_DEMO_PASSWORD:-demo-password-2026}
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
+    image: finance-web:local
+    ports:
+      - '8080:8080'
+    environment:
+      SUPABASE_URL: ${VITE_SUPABASE_URL}
+    # Файловая система контейнера только для чтения; писать nginx может лишь во временные
+    # каталоги в памяти. uid 101 — пользователь nginx в непривилегированном образе.
+    read_only: true
+    tmpfs:
+      - /tmp:uid=101,gid=101
+      - /var/cache/nginx:uid=101,gid=101
+      - /etc/nginx/conf.d:uid=101,gid=101
+    restart: unless-stopped

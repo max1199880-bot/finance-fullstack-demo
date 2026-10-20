@@ -1,0 +1,17 @@
+# В контекст сборки не попадают секреты, зависимости и всё, что не нужно для сборки.
+.env
+.env.*
+!.env.example
+node_modules
+dist
+.git
+.github
+.vercel
+.claude
+graphify-out
+supabase/.temp
+supabase/functions/.env
+docs
+coverage
+*.log
+Для Сдачи ДЗ

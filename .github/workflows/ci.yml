@@ -1,7 +1,7 @@
 # CI/CD: проверка каждого пуша и деплой из main.
 #
 #   quality ──┐
-#             ├──► deploy (только push в main): миграции → функция → проверка API
+#   docker  ──┼──► deploy (только push в main): миграции → функция → проверка API
 #   api-tests ┘
 #                                   │ workflow завершён успешно
 #                                   ▼
@@ -141,9 +141,35 @@ jobs:
         if: failure()
         run: cat functions.log
 
+  docker:
+    name: Образ Docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      # Значения-заглушки: проверяется сборка и раздача, а не связь с бэкендом.
+      - name: Сборка образа
+        run: |
+          docker build -t finance-web:ci \
+            --build-arg VITE_SUPABASE_URL=http://127.0.0.1:54321 \
+            --build-arg VITE_SUPABASE_ANON_KEY=ci-placeholder .
+
+      # Запуск так же, как в docker-compose.yml: только чтение, не root.
+      - name: Контейнер отвечает
+        run: |
+          docker run -d --name web -p 8080:8080 --read-only \
+            --tmpfs /tmp:uid=101,gid=101 --tmpfs /var/cache/nginx:uid=101,gid=101 \
+            --tmpfs /etc/nginx/conf.d:uid=101,gid=101 finance-web:ci
+          for i in $(seq 1 15); do curl -sf http://127.0.0.1:8080/healthz && break; sleep 1; done
+          curl -sf -o /dev/null http://127.0.0.1:8080/budget
+          curl -sI http://127.0.0.1:8080/ | grep -qi '^content-security-policy:'
+          test "$(docker exec web id -u)" = "101"
+          echo "Образ собран, контейнер отдаёт приложение с заголовками безопасности"
+
   deploy:
     name: Деплой бэкенда
-    needs: [quality, api-tests]
+    needs: [quality, api-tests, docker]
     # DEPLOY_ENABLED — переменная репозитория: деплой бэкенда включается, когда в окружении
     # production задан SUPABASE_ACCESS_TOKEN. Без неё джоба пропускается, а не падает на
     # пустом токене; фронтенд при этом выкладывается всё равно (см. шапку файла).
