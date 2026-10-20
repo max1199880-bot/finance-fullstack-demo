@@ -1,12 +1,18 @@
 # CI/CD: проверка каждого пуша и деплой из main.
 #
 #   quality ──┐
-#             ├──► deploy (только push в main): миграции → функция → фронтенд → проверка прода
+#             ├──► deploy (только push в main): миграции → функция → проверка API
 #   api-tests ┘
+#                                   │ workflow завершён успешно
+#                                   ▼
+#               Vercel собирает и выкладывает фронтенд этого коммита
 #
 # Деплой стоит за обоими проверочными этапами: красный линтер или упавший тест API
-# не дают коду попасть на прод. Автодеплой Vercel из git выключен (vercel.json),
-# поэтому других путей на прод нет.
+# не дают коду попасть на прод. Фронтенд выкладывает Vercel из git, но только ветку
+# main и только после зелёного завершения ЭТОГО workflow: перед сборкой Vercel
+# запускает scripts/vercel-wait-ci.mjs (ignoreCommand в vercel.json), а тот ждёт
+# статус запуска в GitHub. Так фронтенд всегда выходит после бэкенда, а токен
+# Vercel в GitHub не нужен вовсе.
 #
 # Сторонние actions закреплены по SHA, а CLI — точными версиями: деплой держит
 # прод-токены, и перевешенный тег или свежий скомпрометированный релиз не должен
@@ -136,22 +142,21 @@ jobs:
         run: cat functions.log
 
   deploy:
-    name: Деплой на прод
+    name: Деплой бэкенда
     needs: [quality, api-tests]
-    # DEPLOY_ENABLED — переменная репозитория: деплой включается, когда в окружении
-    # production заданы секреты. Без неё джоба пропускается, а не падает на пустых токенах.
+    # DEPLOY_ENABLED — переменная репозитория: деплой бэкенда включается, когда в окружении
+    # production задан SUPABASE_ACCESS_TOKEN. Без неё джоба пропускается, а не падает на
+    # пустом токене; фронтенд при этом выкладывается всё равно (см. шапку файла).
     if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment:
       name: production
       url: https://finance-fullstack-demo.vercel.app
-    # Здесь только несекретные идентификаторы. Токены выдаются каждому шагу отдельно:
-    # шагу Vercel не нужен доступ к базе, а шагам Supabase — к хостингу.
+    # Здесь только несекретный идентификатор. Токен выдаётся каждому шагу отдельно,
+    # а не всей джобе: шагу проверки он не нужен.
     env:
       SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
-      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
@@ -182,23 +187,15 @@ jobs:
           supabase secrets set APP_VERSION="${GITHUB_SHA::7}" --project-ref "$SUPABASE_PROJECT_REF"
           supabase functions deploy api --project-ref "$SUPABASE_PROJECT_REF"
 
-      - name: Фронтенд на Vercel
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: |
-          npm i -g vercel@64.5.0
-          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
-          vercel build --prod --token="$VERCEL_TOKEN"
-          vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
-
-      # Деплой считается успешным, только если прод действительно отвечает.
-      - name: Проверка прода после выкладки
+      # Деплой считается успешным, только если API действительно отвечает новой версией.
+      # Иначе workflow красный, и Vercel не выложит фронтенд под сломанный бэкенд.
+      - name: Проверка API после выкладки
         run: |
           for i in $(seq 1 10); do
-            if curl -sf "https://$SUPABASE_PROJECT_REF.supabase.co/functions/v1/api/health" | grep -q '"status":"ok"' \
-               && curl -sf -o /dev/null https://finance-fullstack-demo.vercel.app/; then
-              echo "Прод отвечает"; exit 0
+            body=$(curl -sf "https://$SUPABASE_PROJECT_REF.supabase.co/functions/v1/api/health" || true)
+            if echo "$body" | grep -q '"status":"ok"' && echo "$body" | grep -q "\"version\":\"${GITHUB_SHA::7}\""; then
+              echo "API отвечает, версия ${GITHUB_SHA::7}"; exit 0
             fi
             sleep 6
           done
-          echo "Прод не отвечает после выкладки"; exit 1
+          echo "API не отвечает новой версией после выкладки"; exit 1
