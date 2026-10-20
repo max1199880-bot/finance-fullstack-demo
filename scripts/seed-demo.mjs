@@ -207,5 +207,12 @@ counts.budget_plan_global = await insert(
 
 rmSync(tmp, { recursive: true, force: true });
 
+// Отметка «наполнение закончено» — ПОСЛЕ записи всех данных и по часам самой базы.
+// По ней ночная уборка (cleanup_demo) отличает исходные данные от добавленных посетителями.
+// Часы этой машины не годятся: даже расхождение в десятки миллисекунд делало строки
+// «новее» отметки, и уборка стирала демо целиком (инцидент 20.10.2026).
+const mark = await admin.rpc('mark_demo_seeded', { p_user: userId });
+if (mark.error) throw new Error(`Отметка seeded_at не поставлена: ${mark.error.message}`);
+
 console.log(`Демо-аккаунт ${EMAIL} готов (id ${userId}).`);
 for (const [table, n] of Object.entries(counts)) console.log(`  ${table}: ${n}`);

@@ -28,6 +28,10 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  API_BASE: https://${{ vars.SUPABASE_PROJECT_REF }}.supabase.co/functions/v1/api
+  AUTH_URL: https://${{ vars.SUPABASE_PROJECT_REF }}.supabase.co/auth/v1
+  ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+  DEMO_PASSWORD: ${{ vars.DEMO_PASSWORD }}
   # При проверке алерта опрашиваем заведомо несуществующий путь — прод при этом не трогаем.
   API_HEALTH: https://${{ vars.SUPABASE_PROJECT_REF }}.supabase.co/functions/v1/api/${{ inputs.simulate_outage && 'health-simulated-outage' || 'health' }}
   APP_URL: https://finance-fullstack-demo.vercel.app/
@@ -55,6 +59,22 @@ jobs:
             app_code=$(curl -s -m 20 -o /dev/null -w '%{http_code}' "$APP_URL" || echo "000")
             if [ "$app_code" != "200" ]; then
               problems="${problems}Фронтенд ответил ${app_code}\n"
+            fi
+
+            # Проверка содержимого, а не только живости: входим в демо и смотрим, что операции
+            # на месте. /health не видит пустых данных — 20.10 ночная уборка стёрла демо, а он
+            # оставался зелёным. Ключ anon и пароль демо публичны (они есть в коде страницы).
+            token=$(curl -s -m 20 -X POST "$AUTH_URL/token?grant_type=password" \
+              -H "apikey: $ANON_KEY" -H 'Content-Type: application/json' \
+              -d "{\"email\":\"demo@example.com\",\"password\":\"$DEMO_PASSWORD\"}" | jq -r '.access_token // empty')
+            if [ -z "$token" ]; then
+              problems="${problems}Не удалось войти в демо-аккаунт\n"
+            else
+              txs=$(curl -s -m 20 "$API_BASE/bootstrap?txLimit=5" -H "apikey: $ANON_KEY" \
+                -H "Authorization: Bearer $token" | jq '.recentTransactions | length // 0')
+              if [ "${txs:-0}" -lt 1 ]; then
+                problems="${problems}Демо-аккаунт пуст: в последних операциях ${txs:-0} записей\n"
+              fi
             fi
 
             [ -z "$problems" ] && break

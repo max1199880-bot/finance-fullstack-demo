@@ -211,3 +211,45 @@ describe('B-11: политика паролей', () => {
     expect(error).not.toBeNull();
   });
 });
+
+describe('Инцидент 20.10: ночная уборка демо не трогает исходные данные', () => {
+  // Уборку запускает только cron в самой базе, у пользователей прав на неё нет —
+  // поэтому тест вызывает её служебным ключом, как это делает планировщик.
+  const admin = () =>
+    createClient(SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY ?? '', {
+      auth: { persistSession: false },
+    });
+
+  async function demoTxCount(demo: Client): Promise<number> {
+    const { count } = await dbAs(demo).from('transactions').select('id', { count: 'exact', head: true });
+    return count ?? 0;
+  }
+
+  it('сразу после наполнения уборка не удаляет ничего', async () => {
+    const demo = await signInDemo();
+    const before = await demoTxCount(demo);
+    expect(before).toBeGreaterThan(100); // наполненное демо — полгода операций
+
+    const { data, error } = await admin().rpc('cleanup_demo');
+    expect(error).toBeNull();
+    expect((data as { transactions?: number }).transactions).toBe(0);
+    expect(await demoTxCount(demo)).toBe(before);
+  });
+
+  it('добавленное посетителем удаляется, исходное остаётся', async () => {
+    const demo = await signInDemo();
+    const before = await demoTxCount(demo);
+    const accounts = await ok<Account[]>(demo, 'GET', '/accounts');
+    const categories = await ok<{ id: string }[]>(demo, 'GET', '/categories?type=expense');
+    await ok(demo, 'POST', '/transactions', {
+      type: 'expense',
+      categoryId: categories[0].id,
+      fromAccountId: accounts[0].id,
+      amount: '1',
+    });
+    expect(await demoTxCount(demo)).toBe(before + 1);
+
+    await admin().rpc('cleanup_demo');
+    expect(await demoTxCount(demo)).toBe(before);
+  });
+});
