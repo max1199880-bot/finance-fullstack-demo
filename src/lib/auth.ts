@@ -1,7 +1,7 @@
 // Вход, регистрация и выход. Пароли проверяет Supabase Auth: приложение их не видит
 // и не хранит — в браузере остаётся только токен доступа.
 
-import { supabase } from './supabase';
+import { SUPABASE_ANON_KEY, SUPABASE_URL, supabase } from './supabase';
 
 /**
  * Учётная запись для просмотра демо: заполнена вымышленными данными за полгода.
@@ -56,6 +56,27 @@ export const OAUTH_PENDING_KEY = 'oauth-pending';
  *      supabase-js меняет его на сессию (detectSessionInUrl).
  * Client Secret хранится только в Supabase — в браузер он не попадает.
  */
+/**
+ * Включён ли вход через Google в настройках Supabase Auth.
+ *
+ * Без этой проверки кнопка при выключенном провайдере уводила на страницу Supabase
+ * с ответом 400 в виде JSON, и вернуться в приложение было нельзя. Настройки публичные,
+ * их отдаёт `/auth/v1/settings` по анонимному ключу. `null` — ответа нет (офлайн, сбой):
+ * тогда кнопку не блокируем, ошибку покажет сам вход.
+ */
+export async function googleSignInEnabled(): Promise<boolean | null> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/settings`, {
+      headers: { apikey: SUPABASE_ANON_KEY },
+    });
+    if (!res.ok) return null;
+    const settings = (await res.json()) as { external?: { google?: boolean } };
+    return settings.external?.google === true;
+  } catch {
+    return null;
+  }
+}
+
 export async function signInWithGoogle(): Promise<void> {
   try {
     sessionStorage.setItem(OAUTH_PENDING_KEY, 'google');

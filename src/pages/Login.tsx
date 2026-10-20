@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   OAUTH_PENDING_KEY,
+  googleSignInEnabled,
   oauthErrorFromUrl,
   signIn,
   signInDemo,
@@ -27,6 +28,14 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [busy, setBusy] = useState<'form' | 'demo' | 'google' | null>(null);
+  const [googleAvailable, setGoogleAvailable] = useState<boolean | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void googleSignInEnabled().then((v) => alive && setGoogleAvailable(v));
+    return () => {
+      alive = false;
+    };
+  }, []);
   // Ошибку от провайдера читаем сразу при открытии: Google вернул пользователя сюда
   // с ?error=… (например, он нажал «Отмена»).
   const [error, setError] = useState(() => oauthErrorFromUrl() ?? '');
@@ -189,7 +198,8 @@ export function LoginPage() {
         <button
           type="button"
           onClick={() => void enterWithGoogle()}
-          disabled={busy !== null}
+          disabled={busy !== null || googleAvailable === false}
+          aria-describedby={googleAvailable === false ? 'google-off' : undefined}
           className="w-full py-3 rounded-xl bg-ios-surface text-[17px] flex items-center justify-center gap-2 disabled:opacity-50"
         >
           <svg aria-hidden width="18" height="18" viewBox="0 0 48 48">
@@ -212,6 +222,11 @@ export function LoginPage() {
           </svg>
           {busy === 'google' ? 'Переходим в Google…' : 'Войти через Google'}
         </button>
+        {googleAvailable === false && (
+          <div id="google-off" className="mt-1 text-ios-hint text-[13px] text-center">
+            Вход через Google пока не включён на сервере
+          </div>
+        )}
 
         <button
           type="button"
