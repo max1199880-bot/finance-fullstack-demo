@@ -342,6 +342,16 @@ skip_nonce_check = false
 # If enabled, it will allow the user to successfully authenticate when the provider does not return an email address.
 email_optional = false
 
+# Вход через Google по ID-токену (Google Identity Services, src/lib/googleIdentity.ts).
+# Supabase проверяет подпись токена ключами Google и адресата — этот Client ID.
+# Client Secret не нужен: он требуется только для входа перенаправлением с обменом кода,
+# которого в приложении нет. Client ID не секрет — он виден в коде страницы.
+[auth.external.google]
+enabled = true
+client_id = "718068379717-0d18ur6h98vsq7mv3711vb0kvh328m1o.apps.googleusercontent.com"
+secret = ""
+skip_nonce_check = false
+
 # Allow Solana wallet holders to sign in to your project via the Sign in with Solana (SIWS, EIP-4361) standard.
 # You can configure "web3" rate limit in the [auth.rate_limit] section and set up [auth.captcha] if self-hosting.
 [auth.web3.solana]

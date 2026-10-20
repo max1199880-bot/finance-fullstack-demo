@@ -45,24 +45,12 @@ export async function signUp(email: string, password: string, displayName: strin
 
 export const signInDemo = () => signIn(DEMO_EMAIL, DEMO_PASSWORD);
 
-/** Метка «вход через Google начат»: после возврата от провайдера по ней понятно, откуда пришёл вход. */
-export const OAUTH_PENDING_KEY = 'oauth-pending';
-
-/**
- * Вход через Google (OAuth2 Authorization Code + PKCE).
- *   1. Supabase Auth уводит на страницу Google с одноразовым state и code_challenge.
- *   2. Google возвращает в Supabase код, Supabase проверяет его своим Client Secret.
- *   3. Пользователь попадает обратно на /login с одноразовым кодом приложения,
- *      supabase-js меняет его на сессию (detectSessionInUrl).
- * Client Secret хранится только в Supabase — в браузер он не попадает.
- */
 /**
  * Включён ли вход через Google в настройках Supabase Auth.
  *
- * Без этой проверки кнопка при выключенном провайдере уводила на страницу Supabase
- * с ответом 400 в виде JSON, и вернуться в приложение было нельзя. Настройки публичные,
- * их отдаёт `/auth/v1/settings` по анонимному ключу. `null` — ответа нет (офлайн, сбой):
- * тогда кнопку не блокируем, ошибку покажет сам вход.
+ * Пока провайдер выключен, кнопка неактивна с подсказкой — иначе вход падал бы с
+ * непонятной ошибкой. Настройки публичные, их отдаёт `/auth/v1/settings` по анонимному
+ * ключу. `null` — ответа нет (офлайн, сбой): тогда кнопку не блокируем, ошибку покажет вход.
  */
 export async function googleSignInEnabled(): Promise<boolean | null> {
   try {
@@ -77,34 +65,19 @@ export async function googleSignInEnabled(): Promise<boolean | null> {
   }
 }
 
-export async function signInWithGoogle(): Promise<void> {
-  try {
-    sessionStorage.setItem(OAUTH_PENDING_KEY, 'google');
-  } catch {
-    /* без sessionStorage вход работает, просто не отметим источник в аналитике */
+/**
+ * Вход по ID-токену Google (поток — в lib/googleIdentity.ts). Supabase Auth сам проверяет
+ * подпись токена, адресата (наш Client ID) и nonce; приложение токену не доверяет.
+ */
+export async function signInWithGoogleIdToken(idToken: string, nonce: string): Promise<void> {
+  const { error } = await supabase.auth.signInWithIdToken({ provider: 'google', token: idToken, nonce });
+  if (!error) return;
+  const m = error.message.toLowerCase();
+  if (m.includes('not enabled') || m.includes('unsupported provider')) {
+    throw new Error('Вход через Google сейчас недоступен');
   }
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: `${window.location.origin}/login`,
-      // Окно выбора аккаунта Google каждый раз: на общем устройстве иначе молча
-      // подставился бы аккаунт предыдущего человека.
-      queryParams: { prompt: 'select_account' },
-    },
-  });
-  if (error) throw new Error(humanize(error.message));
-}
-
-/** Ошибка, с которой провайдер вернул пользователя (отказ, отмена, неверная настройка). */
-export function oauthErrorFromUrl(): string | null {
-  const params = new URLSearchParams(window.location.search);
-  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-  const code = params.get('error') ?? hash.get('error');
-  if (!code) return null;
-  const description = params.get('error_description') ?? hash.get('error_description') ?? '';
-  if (code === 'access_denied') return 'Вход через Google отменён';
-  if (/provider is not enabled/i.test(description)) return 'Вход через Google сейчас недоступен';
-  return `Не удалось войти через Google${description ? `: ${description}` : ''}`;
+  if (m.includes('nonce')) throw new Error('Вход через Google устарел, попробуйте ещё раз');
+  throw new Error(`Не удалось войти через Google: ${humanize(error.message)}`);
 }
 
 export async function signOut(): Promise<void> {
