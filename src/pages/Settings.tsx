@@ -17,13 +17,11 @@ export function SettingsPage({
   onOpenCategories,
   onOpenIncomeSources,
   onReplayOnboarding,
-  onOpenAdmin,
 }: {
   onBack?: () => void;
   onOpenCategories?: () => void;
   onOpenIncomeSources?: () => void;
   onReplayOnboarding?: () => void;
-  onOpenAdmin?: () => void;
 } = {}) {
   const me = useQuery({ queryKey: ['me'], queryFn: api.me });
   const qc = useQueryClient();
@@ -88,29 +86,6 @@ export function SettingsPage({
         </div>
       </Card>
 
-      <Card title="Уведомления">
-        <ListRow
-          left="Напоминания о вводе"
-          right={
-            <button
-              type="button"
-              onClick={() => update.mutate({ remindersEnabled: !me.data!.remindersEnabled })}
-              className={`w-12 h-7 rounded-full transition relative ${
-                me.data.remindersEnabled ? 'bg-ios-green' : 'bg-ios-divider'
-              }`}
-              aria-pressed={me.data.remindersEnabled}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
-                  me.data!.remindersEnabled ? 'translate-x-5' : ''
-                }`}
-              />
-            </button>
-          }
-          divider={false}
-        />
-      </Card>
-
       <IconThemeCard />
 
       <Card title="Категории и источники">
@@ -141,29 +116,6 @@ export function SettingsPage({
           divider={false}
         />
       </Card>
-
-      {me.data.isOwner && (
-        <Card title="🔐 Админ">
-          <ListRow
-            left={
-              <div>
-                <span>Все пользователи и отзывы</span>
-                <div className="text-xs text-ios-hint mt-0.5">видишь только ты</div>
-              </div>
-            }
-            right={
-              <button
-                type="button"
-                onClick={() => onOpenAdmin?.()}
-                className="text-ios-accent text-sm font-medium"
-              >
-                Открыть →
-              </button>
-            }
-            divider={false}
-          />
-        </Card>
-      )}
 
       {/* HiddenAccountsCard moved to Analytics → "Куплено и продано".
           Users wanted the sold-assets view next to other historical data,
@@ -284,8 +236,6 @@ function LogoutCard() {
     },
     onSuccess: async () => {
       haptic('success');
-      // eslint-disable-next-line no-console
-      console.log('[logout] done');
       // Wipe cached identity-scoped data before sending the user to login.
       qc.clear();
       navigate('/login', { replace: true });
@@ -491,8 +441,3 @@ function HiddenCategoriesCard() {
     </Card>
   );
 }
-
-// HiddenAccountsCard removed — moved into Analytics → "Куплено и продано"
-// with full P&L breakdown. See webapp/src/pages/Analytics.tsx (SoldAssetsCard).
-// The /api/accounts/hidden + restore/purge endpoints stay for now in case the
-// admin tooling needs to bring an accidentally-hidden cash/bank account back.

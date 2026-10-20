@@ -22,7 +22,7 @@ const queryClient = new QueryClient({
       // cache gives an instant app-open (even offline); the settings below make
       // sure that cached view is replaced with fresh server data quickly, so the
       // PWA and the Telegram Mini App (two separate webviews reading the SAME
-      // Neon DB) don't drift apart.
+      // Supabase backend) don't drift apart.
       networkMode: 'offlineFirst',
       retry: 1,
       // Re-fetch whenever the app regains focus / is reopened from the

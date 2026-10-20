@@ -1418,9 +1418,6 @@ const ROUTES: Array<[method: string, pattern: RegExp, handler: Handler]> = [
       return { ok: true, id };
     },
   ],
-  ['GET', /^\/api\/push\/vapid-public-key$/, () => fail(503, 'Push notifications are not configured')],
-  ['POST', /^\/api\/push\/subscribe$/, () => fail(503, 'Push notifications are not configured')],
-  ['POST', /^\/api\/push\/unsubscribe$/, () => ({ ok: true })],
 ];
 
 /** Найти обработчик и выполнить. Изменения сохраняются в хранилище только при успехе. */

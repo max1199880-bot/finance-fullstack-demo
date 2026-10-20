@@ -11,53 +11,6 @@ export interface MeDTO {
   currentMonth: string;
 }
 
-export interface AdminUserRow {
-  id: string;
-  telegramUserId: string;
-  firstName: string | null;
-  lastName: string | null;
-  username: string | null;
-  isOwner: boolean;
-  createdAt: string;
-  lastTxDate: string | null;
-  txTotal: number;
-  accountCount: number;
-  thisMonth: {
-    income: string;
-    expense: string;
-    investment: string;
-    incomeCount: number;
-    expenseCount: number;
-  };
-  capital: {
-    totalCash: string;
-    totalInvestments: string;
-    totalOther: string;
-    totalNetWorth: string;
-  };
-}
-
-export interface AdminAggregateDTO {
-  from: string;
-  to: string;
-  income: string;
-  expense: string;
-  investment: string;
-  txCount: number;
-  activeUsers: number;
-}
-
-export interface FeedbackRow {
-  id: string;
-  message: string;
-  createdAt: string;
-  resolved: boolean;
-  telegramUserId: string;
-  firstName: string | null;
-  lastName: string | null;
-  username: string | null;
-}
-
 export interface BootstrapDTO {
   me: MeDTO;
   summary: MonthSummaryDTO;
@@ -701,33 +654,6 @@ export const api = {
       body: JSON.stringify({ message }),
     }),
 
-  // Admin (owner-only). Returns 403 to non-owners.
-  adminUsers: () => call<{ totalUsers: number; users: AdminUserRow[] }>('/api/admin/users'),
-  adminAggregate: (from?: string, to?: string) => {
-    const qs = new URLSearchParams();
-    if (from) qs.set('from', from);
-    if (to) qs.set('to', to);
-    return call<AdminAggregateDTO>(`/api/admin/aggregate${qs.toString() ? '?' + qs : ''}`);
-  },
-  adminFeedback: (unresolvedOnly = false) =>
-    call<FeedbackRow[]>(`/api/admin/feedback${unresolvedOnly ? '?unresolved=true' : ''}`),
-  adminMarkFeedbackResolved: (id: string, resolved: boolean) =>
-    call<{ ok: true }>(`/api/admin/feedback/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ resolved }),
-    }),
-  adminUserTransactions: (
-    userId: string,
-    params?: { limit?: number; from?: string; to?: string; type?: string },
-  ) => {
-    const qs = new URLSearchParams();
-    if (params?.limit) qs.set('limit', String(params.limit));
-    if (params?.from) qs.set('from', params.from);
-    if (params?.to) qs.set('to', params.to);
-    if (params?.type) qs.set('type', params.type);
-    return call<TransactionDTO[]>(`/api/admin/users/${userId}/transactions?${qs}`);
-  },
-
   // Analytics
   analyticsSummary: (from?: string, to?: string) => {
     const qs = new URLSearchParams();
@@ -810,13 +736,6 @@ export const api = {
   logout: () => call<{ ok: true }>('/api/auth/logout', { method: 'POST' }),
   authMe: () => call<{ id: string; firstName: string | null; telegramUserId: string }>('/api/auth/me'),
   authWidgetConfig: () => call<{ botUsername: string }>('/api/auth/widget-config'),
-
-  // ── Web Push ─────────────────────────────────────────────────────────────
-  vapidPublicKey: () => call<{ key: string }>('/api/push/vapid-public-key'),
-  pushSubscribe: (sub: { endpoint: string; keys: { p256dh: string; auth: string } }) =>
-    call<{ ok: true }>('/api/push/subscribe', { method: 'POST', body: JSON.stringify(sub) }),
-  pushUnsubscribe: (endpoint: string) =>
-    call<{ ok: true }>('/api/push/unsubscribe', { method: 'POST', body: JSON.stringify({ endpoint }) }),
 };
 
 // Payload delivered by the Telegram Login Widget `data-onauth` callback.

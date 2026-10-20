@@ -60,12 +60,9 @@ export function InstallPrompt() {
 
   const install = async () => {
     if (!deferred) return;
-    // eslint-disable-next-line no-console
-    console.log('[install] prompt shown');
     await deferred.prompt();
-    const choice = await deferred.userChoice;
-    // eslint-disable-next-line no-console
-    console.log('[install]', choice.outcome);
+    // Баннер прячем только после ответа пользователя: и «установить», и «отмена» закрывают его.
+    await deferred.userChoice;
     dismiss();
   };
 

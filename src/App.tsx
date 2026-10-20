@@ -82,11 +82,10 @@ function AppShell() {
     applyTelegramTheme();
   }, []);
 
-  // Keep the PWA and the Telegram Mini App in sync. They're separate webviews
-  // reading the same Neon DB, each with its own persisted cache. When either
-  // surface becomes visible again (reopened / brought to foreground), pull the
-  // latest server data so the numbers can't drift apart between the two. The
-  // Telegram webview doesn't always fire window 'focus', so we also listen to
+  // PWA и Telegram Mini App — две отдельные веб-вьюхи с общей базой (Supabase), и у каждой
+  // свой сохранённый кеш. Когда любая из них снова становится видимой (открыли заново,
+  // вернули из фона), подтягиваем свежие данные с сервера: цифры в двух местах не должны
+  // расходиться. Webview Telegram не всегда шлёт window 'focus', поэтому слушаем ещё и
   // 'visibilitychange'.
   useEffect(() => {
     const refresh = () => {
@@ -185,7 +184,6 @@ function AppShell() {
                   onOpenCategories={() => navigate('/settings/categories')}
                   onOpenIncomeSources={() => navigate('/settings/income-sources')}
                   onReplayOnboarding={() => setForcedOnboarding(true)}
-                  onOpenAdmin={() => navigate('/admin')}
                 />
               }
             />
@@ -197,7 +195,6 @@ function AppShell() {
               path="/settings/income-sources"
               element={<IncomeSourceEditorPage onBack={() => navigate('/settings')} />}
             />
-            {/* Демо: админ-панель владельца в публичную копию не входит (у демо-пользователя isOwner=false). */}
             {/* Unknown path → home. */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>

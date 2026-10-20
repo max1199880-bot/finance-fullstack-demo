@@ -11,10 +11,6 @@ export function UpdatePrompt() {
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
   } = useRegisterSW({
-    onRegisteredSW(swUrl, registration) {
-      // eslint-disable-next-line no-console
-      console.log('[sw] registered', { swUrl, scope: registration?.scope });
-    },
     onRegisterError(error) {
       console.error('[sw] registration failed', error);
     },
