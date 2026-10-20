@@ -41,134 +41,135 @@ export function BudgetPage() {
   return (
     <div className="pb-28">
       <Header title="Бюджет" subtitle={fmtMonth(b.month)} />
+      {/* Десктоп: секции в две колонки (index.css, .desktop-columns). */}
+      <div className="desktop-columns">
+        {/* Total card — на десктопе во всю ширину, над колонками. */}
+        <div className="px-4 desktop-span">
+          <button
+            type="button"
+            onClick={() => setEditing({ kind: 'global_expense' })}
+            className="w-full text-left bg-ios-surface rounded-ios-lg p-5 shadow-card active:scale-[0.99]"
+          >
+            <div className="text-sm text-ios-hint">Расход за {fmtMonth(b.month)}</div>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="text-3xl font-rounded font-bold tabular-nums">{fmtRub(b.total.actual)}</span>
+              <span className="text-ios-hint tabular-nums">из {fmtRub(b.total.planned)}</span>
+            </div>
+            <div className="mt-3">
+              <ProgressBar percent={b.total.percent} status={b.total.status} />
+            </div>
+            <div className={`mt-2 text-sm ${STATUS_COLOR[b.total.status]}`}>
+              {b.total.percent !== null
+                ? `${b.total.percent}% · ${parseFloat(b.total.delta) > 0 ? 'превышение' : 'остаток'} ${fmtRub(Math.abs(parseFloat(b.total.delta)))}`
+                : 'План не задан — нажмите, чтобы задать'}
+            </div>
+          </button>
+        </div>
 
-      {/* Total card */}
-      <div className="px-4">
-        <button
-          type="button"
-          onClick={() => setEditing({ kind: 'global_expense' })}
-          className="w-full text-left bg-ios-surface rounded-ios-lg p-5 shadow-card active:scale-[0.99]"
-        >
-          <div className="text-sm text-ios-hint">Расход за {fmtMonth(b.month)}</div>
-          <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-3xl font-rounded font-bold tabular-nums">{fmtRub(b.total.actual)}</span>
-            <span className="text-ios-hint tabular-nums">из {fmtRub(b.total.planned)}</span>
-          </div>
-          <div className="mt-3">
-            <ProgressBar percent={b.total.percent} status={b.total.status} />
-          </div>
-          <div className={`mt-2 text-sm ${STATUS_COLOR[b.total.status]}`}>
-            {b.total.percent !== null
-              ? `${b.total.percent}% · ${parseFloat(b.total.delta) > 0 ? 'превышение' : 'остаток'} ${fmtRub(Math.abs(parseFloat(b.total.delta)))}`
-              : 'План не задан — нажмите, чтобы задать'}
-          </div>
-        </button>
-      </div>
+        <div className="mt-5 desktop-flatten">
+          <Card title="Категории">
+            {b.categories.map((row, i) => (
+              <ListRow
+                key={row.categoryId}
+                divider={i !== b.categories.length - 1}
+                onClick={() => {
+                  haptic('light');
+                  setEditing({ kind: 'category', row });
+                }}
+                left={
+                  <div>
+                    <div className="font-medium flex items-center gap-2">
+                      <span className="text-lg">{categoryEmoji(row.name)}</span>
+                      <span>{row.name}</span>
+                      {row.percent !== null && (
+                        <span className={`text-xs font-semibold ${STATUS_COLOR[row.status]}`}>
+                          {row.percent}%
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-1.5 max-w-[260px] lg:max-w-none">
+                      <ProgressBar percent={row.percent} status={row.status} />
+                    </div>
+                    <div className="mt-1 text-xs text-ios-hint tabular-nums">
+                      {row.percent === null
+                        ? `${fmtRub(row.actual)} (план не задан)`
+                        : `${fmtRub(row.actual)} / ${fmtRub(row.planned)}`}
+                    </div>
+                  </div>
+                }
+              />
+            ))}
+          </Card>
 
-      <div className="mt-5">
-        <Card title="Категории">
-          {b.categories.map((row, i) => (
+          <Card title="Источники дохода">
+            <div className="px-3 py-2">
+              <IncomeSourceList compact />
+            </div>
+          </Card>
+
+          <Card title="Доходы и инвестиции">
+            {/* Доходы */}
             <ListRow
-              key={row.categoryId}
-              divider={i !== b.categories.length - 1}
-              onClick={() => {
-                haptic('light');
-                setEditing({ kind: 'category', row });
-              }}
+              onClick={() => setEditing({ kind: 'global_income' })}
               left={
-                <div>
-                  <div className="font-medium flex items-center gap-2">
-                    <span className="text-lg">{categoryEmoji(row.name)}</span>
-                    <span>{row.name}</span>
-                    {row.percent !== null && (
-                      <span className={`text-xs font-semibold ${STATUS_COLOR[row.status]}`}>
-                        {row.percent}%
-                      </span>
-                    )}
+                <div className="w-full">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-sm">Доходы</span>
+                    <div className="text-right">
+                      <span className="font-medium tabular-nums">{fmtRub(b.totalIncome)}</span>
+                      {b.plannedIncome && (
+                        <span className="text-xs text-ios-hint ml-1 tabular-nums">
+                          / {fmtRub(b.plannedIncome)}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="mt-1.5 max-w-[260px]">
-                    <ProgressBar percent={row.percent} status={row.status} />
-                  </div>
-                  <div className="mt-1 text-xs text-ios-hint tabular-nums">
-                    {row.percent === null
-                      ? `${fmtRub(row.actual)} (план не задан)`
-                      : `${fmtRub(row.actual)} / ${fmtRub(row.planned)}`}
-                  </div>
+                  {b.plannedIncome ? (
+                    (() => {
+                      const pct = Math.round((parseFloat(b.totalIncome) / parseFloat(b.plannedIncome)) * 100);
+                      const status: FactStatus = pct >= 100 ? 'ok' : pct >= 50 ? 'warning' : 'no_plan';
+                      return <ProgressBar percent={pct} status={status} />;
+                    })()
+                  ) : (
+                    <div className="text-[11px] text-ios-hint">план не задан</div>
+                  )}
                 </div>
               }
             />
-          ))}
-        </Card>
-
-        <Card title="Источники дохода">
-          <div className="px-3 py-2">
-            <IncomeSourceList compact />
-          </div>
-        </Card>
-
-        <Card title="Доходы и инвестиции">
-          {/* Доходы */}
-          <ListRow
-            onClick={() => setEditing({ kind: 'global_income' })}
-            left={
-              <div className="w-full">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-sm">Доходы</span>
-                  <div className="text-right">
-                    <span className="font-medium tabular-nums">{fmtRub(b.totalIncome)}</span>
-                    {b.plannedIncome && (
-                      <span className="text-xs text-ios-hint ml-1 tabular-nums">
-                        / {fmtRub(b.plannedIncome)}
-                      </span>
-                    )}
+            {/* Инвестиции */}
+            <ListRow
+              onClick={() => setEditing({ kind: 'investments' })}
+              divider={false}
+              left={
+                <div className="w-full">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-sm">Инвестиции</span>
+                    <div className="text-right">
+                      <span className="font-medium tabular-nums">{fmtRub(b.totalInvestments)}</span>
+                      {b.plannedInvestments && (
+                        <span className="text-xs text-ios-hint ml-1 tabular-nums">
+                          / {fmtRub(b.plannedInvestments)}
+                        </span>
+                      )}
+                    </div>
                   </div>
+                  {b.plannedInvestments ? (
+                    (() => {
+                      const pct = Math.round(
+                        (parseFloat(b.totalInvestments) / parseFloat(b.plannedInvestments)) * 100,
+                      );
+                      const status: FactStatus = pct >= 100 ? 'ok' : 'warning';
+                      return <ProgressBar percent={pct} status={status} />;
+                    })()
+                  ) : (
+                    <div className="text-[11px] text-ios-hint">план не задан</div>
+                  )}
                 </div>
-                {b.plannedIncome ? (
-                  (() => {
-                    const pct = Math.round((parseFloat(b.totalIncome) / parseFloat(b.plannedIncome)) * 100);
-                    const status: FactStatus = pct >= 100 ? 'ok' : pct >= 50 ? 'warning' : 'no_plan';
-                    return <ProgressBar percent={pct} status={status} />;
-                  })()
-                ) : (
-                  <div className="text-[11px] text-ios-hint">план не задан</div>
-                )}
-              </div>
-            }
-          />
-          {/* Инвестиции */}
-          <ListRow
-            onClick={() => setEditing({ kind: 'investments' })}
-            divider={false}
-            left={
-              <div className="w-full">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-sm">Инвестиции</span>
-                  <div className="text-right">
-                    <span className="font-medium tabular-nums">{fmtRub(b.totalInvestments)}</span>
-                    {b.plannedInvestments && (
-                      <span className="text-xs text-ios-hint ml-1 tabular-nums">
-                        / {fmtRub(b.plannedInvestments)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {b.plannedInvestments ? (
-                  (() => {
-                    const pct = Math.round(
-                      (parseFloat(b.totalInvestments) / parseFloat(b.plannedInvestments)) * 100,
-                    );
-                    const status: FactStatus = pct >= 100 ? 'ok' : 'warning';
-                    return <ProgressBar percent={pct} status={status} />;
-                  })()
-                ) : (
-                  <div className="text-[11px] text-ios-hint">план не задан</div>
-                )}
-              </div>
-            }
-          />
-        </Card>
+              }
+            />
+          </Card>
+        </div>
       </div>
-
       <PlanEditor open={!!editing} onClose={() => setEditing(null)} editing={editing} month={b.month} />
     </div>
   );

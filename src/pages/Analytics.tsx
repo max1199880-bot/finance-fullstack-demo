@@ -174,7 +174,8 @@ export function AnalyticsPage() {
       {everythingFailed ? (
         <LoadError query={failedAll} compact />
       ) : (
-        <>
+        <div className="desktop-columns">
+          {/* Десктоп: секции в две колонки (index.css, .desktop-columns). */}
           {/* Summary card with comparison */}
           <div className="px-4 mt-4">
             {summary.data ? (
@@ -315,7 +316,7 @@ export function AnalyticsPage() {
               )}
             </div>
           </Card>
-        </>
+        </div>
       )}
     </div>
   );

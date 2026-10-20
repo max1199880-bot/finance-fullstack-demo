@@ -151,170 +151,174 @@ export function HomePage({
         </div>
       )}
 
-      {/* Hero card: expenses only */}
-      <div className="px-4 mt-2">
-        <button
-          type="button"
-          onClick={() => onGoTo('budget')}
-          className="w-full text-left bg-gradient-to-br from-ios-accent to-[#5856D6] text-white rounded-ios-lg p-5 shadow-lg active:scale-[0.99] transition-transform"
-        >
-          <div className="text-sm opacity-80">Расход за {fmtMonth(s.month)}</div>
-          <div className="text-4xl font-rounded font-bold mt-1 tabular-nums">{fmtRub(s.totalExpenses)}</div>
+      {/* Десктоп — как в макете Figma: слева итоги месяца, капитал и быстрые действия,
+          справа во всю высоту последние операции. На телефоне — та же колонка, что была. */}
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:grid-rows-[auto_auto_1fr] lg:gap-x-6 lg:items-start">
+        {/* Hero card: expenses only */}
+        <div className="px-4 mt-2 lg:col-start-1 lg:row-start-1">
+          <button
+            type="button"
+            onClick={() => onGoTo('budget')}
+            className="w-full text-left bg-gradient-to-br from-ios-accent to-[#5856D6] text-white rounded-ios-lg p-5 shadow-lg active:scale-[0.99] transition-transform"
+          >
+            <div className="text-sm opacity-80">Расход за {fmtMonth(s.month)}</div>
+            <div className="text-4xl font-rounded font-bold mt-1 tabular-nums">{fmtRub(s.totalExpenses)}</div>
 
-          <div className="mt-3">
-            <ProgressBar percent={s.expensePF.percent} status={s.expensePF.status} />
-          </div>
+            <div className="mt-3">
+              <ProgressBar percent={s.expensePF.percent} status={s.expensePF.status} />
+            </div>
 
-          <div className="mt-3 grid grid-cols-2 gap-3 text-[12px]">
-            <div className="bg-white/15 rounded-md px-2.5 py-2 backdrop-blur-sm">
-              <div className="opacity-80">План</div>
-              <div className="font-semibold tabular-nums mt-0.5 text-[15px]">
-                {plannedExpense > 0 ? fmtRub(s.expensePF.planned, { compact: true }) : '—'}
+            <div className="mt-3 grid grid-cols-2 gap-3 text-[12px]">
+              <div className="bg-white/15 rounded-md px-2.5 py-2 backdrop-blur-sm">
+                <div className="opacity-80">План</div>
+                <div className="font-semibold tabular-nums mt-0.5 text-[15px]">
+                  {plannedExpense > 0 ? fmtRub(s.expensePF.planned, { compact: true }) : '—'}
+                </div>
+              </div>
+              <div className="bg-white/15 rounded-md px-2.5 py-2 backdrop-blur-sm">
+                <div className="opacity-80">{remaining >= 0 ? 'Остаток' : 'Перерасход'}</div>
+                <div className="font-semibold tabular-nums mt-0.5 text-[15px]">
+                  {plannedExpense > 0 ? fmtRub(Math.abs(remaining), { compact: true }) : '—'}
+                </div>
               </div>
             </div>
-            <div className="bg-white/15 rounded-md px-2.5 py-2 backdrop-blur-sm">
-              <div className="opacity-80">{remaining >= 0 ? 'Остаток' : 'Перерасход'}</div>
-              <div className="font-semibold tabular-nums mt-0.5 text-[15px]">
-                {plannedExpense > 0 ? fmtRub(Math.abs(remaining), { compact: true }) : '—'}
-              </div>
-            </div>
-          </div>
-        </button>
-      </div>
+          </button>
+        </div>
 
-      <div className="mt-5">
-        {/* Capital: Money → Investments → Other assets → Total (Капитал) */}
-        <Card title="Капитал">
-          <ListRow
-            left={<span>💵 Деньги</span>}
-            right={<span className="tabular-nums">{fmtRub(cap.totalCash)}</span>}
-            divider
-            onClick={() => onGoTo('capital')}
-          />
-          <ListRow
-            left={<span>📈 Инвестиции</span>}
-            right={<span className="tabular-nums">{fmtRub(cap.totalInvestments)}</span>}
-            divider
-            onClick={() => onGoTo('capital')}
-          />
-          <ListRow
-            left={<span>🚗 Прочие активы</span>}
-            right={<span className="tabular-nums">{fmtRub(cap.totalOther)}</span>}
-            divider
-            onClick={() => onGoTo('capital')}
-          />
-          {/* Credit buffer (escrow toward a loan) — still the user's money, so
+        <div className="mt-5 lg:contents">
+          {/* Capital: Money → Investments → Other assets → Total (Капитал) */}
+          <Card title="Капитал" className="lg:col-start-1 lg:row-start-2 lg:mt-5">
+            <ListRow
+              left={<span>💵 Деньги</span>}
+              right={<span className="tabular-nums">{fmtRub(cap.totalCash)}</span>}
+              divider
+              onClick={() => onGoTo('capital')}
+            />
+            <ListRow
+              left={<span>📈 Инвестиции</span>}
+              right={<span className="tabular-nums">{fmtRub(cap.totalInvestments)}</span>}
+              divider
+              onClick={() => onGoTo('capital')}
+            />
+            <ListRow
+              left={<span>🚗 Прочие активы</span>}
+              right={<span className="tabular-nums">{fmtRub(cap.totalOther)}</span>}
+              divider
+              onClick={() => onGoTo('capital')}
+            />
+            {/* Credit buffer (escrow toward a loan) — still the user's money, so
               it's part of net worth; show it so the breakdown reconciles. */}
-          {parseFloat(cap.totalCreditBuffers) > 0 && (
-            <ListRow
-              left={<span>💰 Взнос по кредиту</span>}
-              right={<span className="tabular-nums text-ios-green">{fmtRub(cap.totalCreditBuffers)}</span>}
-              divider
-              onClick={() => onGoTo('capital')}
-            />
-          )}
-          {/* Debt is SUBTRACTED from net worth. Without this line the visible
+            {parseFloat(cap.totalCreditBuffers) > 0 && (
+              <ListRow
+                left={<span>💰 Взнос по кредиту</span>}
+                right={<span className="tabular-nums text-ios-green">{fmtRub(cap.totalCreditBuffers)}</span>}
+                divider
+                onClick={() => onGoTo('capital')}
+              />
+            )}
+            {/* Debt is SUBTRACTED from net worth. Without this line the visible
               rows didn't add up to «Капитал» — the credit looked "unaccounted for". */}
-          {parseFloat(cap.totalCredits) > 0 && (
+            {parseFloat(cap.totalCredits) > 0 && (
+              <ListRow
+                left={<span>💳 Кредиты</span>}
+                right={<span className="tabular-nums text-ios-red">−{fmtRub(cap.totalCredits)}</span>}
+                divider
+                onClick={() => onGoTo('capital')}
+              />
+            )}
             <ListRow
-              left={<span>💳 Кредиты</span>}
-              right={<span className="tabular-nums text-ios-red">−{fmtRub(cap.totalCredits)}</span>}
-              divider
-              onClick={() => onGoTo('capital')}
+              left={<span className="font-semibold">Капитал</span>}
+              right={
+                <span className="tabular-nums font-semibold text-base text-ios-green">
+                  {fmtRub(cap.totalNetWorth)}
+                </span>
+              }
+              divider={false}
             />
-          )}
-          <ListRow
-            left={<span className="font-semibold">Капитал</span>}
-            right={
-              <span className="tabular-nums font-semibold text-base text-ios-green">
-                {fmtRub(cap.totalNetWorth)}
-              </span>
-            }
-            divider={false}
-          />
-        </Card>
+          </Card>
 
-        <section className="mb-5">
-          <div className="px-4 mb-1.5 flex items-center justify-between">
-            <h2 className="text-[13px] font-semibold uppercase tracking-wider text-ios-hint">
-              Последние операции
-            </h2>
+          <section className="mb-5 lg:col-start-2 lg:row-start-1 lg:row-span-3 lg:mt-2">
+            <div className="px-4 mb-1.5 flex items-center justify-between">
+              <h2 className="text-[13px] font-semibold uppercase tracking-wider text-ios-hint">
+                Последние операции
+              </h2>
+              <button
+                type="button"
+                onClick={() => {
+                  haptic('light');
+                  setShowAllTxs(true);
+                }}
+                className="text-ios-accent text-sm font-medium"
+              >
+                Все →
+              </button>
+            </div>
+            <div className="bg-ios-surface rounded-ios-lg overflow-hidden shadow-card">
+              {txs.length > 0 ? (
+                txs.map((t, i) => {
+                  const target =
+                    t.categoryName ??
+                    t.incomeSourceName ??
+                    ([t.fromAccountName, t.toAccountName].filter(Boolean).join(' → ') || '—');
+                  const sign = t.type === 'income' ? '+' : t.type === 'expense' ? '−' : '';
+                  const acc = txAccount(t);
+                  const color =
+                    t.type === 'income' ? 'text-ios-green' : t.type === 'expense' ? '' : 'text-ios-accent';
+                  const showHeader = i === 0 || dayKey(t.date) !== dayKey(txs[i - 1].date);
+                  return (
+                    <Fragment key={t.id}>
+                      {showHeader && <DateDivider iso={t.date} />}
+                      <ListRow
+                        divider={i !== txs.length - 1}
+                        onClick={() => {
+                          haptic('light');
+                          setEditingTx(t);
+                        }}
+                        left={
+                          <div>
+                            <div className="font-medium truncate">
+                              <span className="mr-1.5">{categoryEmoji(target)}</span>
+                              {target}
+                            </div>
+                            <div className="text-xs text-ios-hint mt-0.5">
+                              {fmtDate(t.date)}
+                              {acc ? ` · 💳 ${acc}` : ''}
+                              {t.comment ? ` · ${t.comment}` : ''}
+                            </div>
+                          </div>
+                        }
+                        right={
+                          <span className={`tabular-nums font-medium ${color}`}>
+                            {sign}
+                            {fmtRub(t.amount)}
+                          </span>
+                        }
+                      />
+                    </Fragment>
+                  );
+                })
+              ) : (
+                <div className="px-4 py-6 text-center text-ios-hint">Операций пока нет.</div>
+              )}
+            </div>
+          </section>
+
+          <div className="px-4 mt-3 grid grid-cols-2 gap-3 lg:col-start-1 lg:row-start-3 lg:mt-0">
             <button
-              type="button"
-              onClick={() => {
-                haptic('light');
-                setShowAllTxs(true);
-              }}
-              className="text-ios-accent text-sm font-medium"
+              onClick={() => onGoTo('analytics')}
+              className="bg-ios-surface rounded-ios-lg p-4 text-left active:scale-[0.98] transition"
             >
-              Все →
+              <div className="text-sm text-ios-hint">Аналитика</div>
+              <div className="text-lg font-rounded font-semibold mt-1">📈 Графики</div>
+            </button>
+            <button
+              onClick={() => onGoTo('add')}
+              className="bg-ios-accent text-white rounded-ios-lg p-4 text-left active:scale-[0.98] transition"
+            >
+              <div className="text-sm opacity-80">Быстрая запись</div>
+              <div className="text-lg font-rounded font-semibold mt-1">＋ Расход</div>
             </button>
           </div>
-          <div className="bg-ios-surface rounded-ios-lg overflow-hidden shadow-card">
-            {txs.length > 0 ? (
-              txs.map((t, i) => {
-                const target =
-                  t.categoryName ??
-                  t.incomeSourceName ??
-                  ([t.fromAccountName, t.toAccountName].filter(Boolean).join(' → ') || '—');
-                const sign = t.type === 'income' ? '+' : t.type === 'expense' ? '−' : '';
-                const acc = txAccount(t);
-                const color =
-                  t.type === 'income' ? 'text-ios-green' : t.type === 'expense' ? '' : 'text-ios-accent';
-                const showHeader = i === 0 || dayKey(t.date) !== dayKey(txs[i - 1].date);
-                return (
-                  <Fragment key={t.id}>
-                    {showHeader && <DateDivider iso={t.date} />}
-                    <ListRow
-                      divider={i !== txs.length - 1}
-                      onClick={() => {
-                        haptic('light');
-                        setEditingTx(t);
-                      }}
-                      left={
-                        <div>
-                          <div className="font-medium truncate">
-                            <span className="mr-1.5">{categoryEmoji(target)}</span>
-                            {target}
-                          </div>
-                          <div className="text-xs text-ios-hint mt-0.5">
-                            {fmtDate(t.date)}
-                            {acc ? ` · 💳 ${acc}` : ''}
-                            {t.comment ? ` · ${t.comment}` : ''}
-                          </div>
-                        </div>
-                      }
-                      right={
-                        <span className={`tabular-nums font-medium ${color}`}>
-                          {sign}
-                          {fmtRub(t.amount)}
-                        </span>
-                      }
-                    />
-                  </Fragment>
-                );
-              })
-            ) : (
-              <div className="px-4 py-6 text-center text-ios-hint">Операций пока нет.</div>
-            )}
-          </div>
-        </section>
-
-        <div className="px-4 mt-3 grid grid-cols-2 gap-3">
-          <button
-            onClick={() => onGoTo('analytics')}
-            className="bg-ios-surface rounded-ios-lg p-4 text-left active:scale-[0.98] transition"
-          >
-            <div className="text-sm text-ios-hint">Аналитика</div>
-            <div className="text-lg font-rounded font-semibold mt-1">📈 Графики</div>
-          </button>
-          <button
-            onClick={() => onGoTo('add')}
-            className="bg-ios-accent text-white rounded-ios-lg p-4 text-left active:scale-[0.98] transition"
-          >
-            <div className="text-sm opacity-80">Быстрая запись</div>
-            <div className="text-lg font-rounded font-semibold mt-1">＋ Расход</div>
-          </button>
         </div>
       </div>
 

@@ -14,7 +14,7 @@ const TABS: { id: Tab; label: string; icon: IconName }[] = [
 export function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
   return (
     <nav
-      className="fixed bottom-0 inset-x-0 z-30 bg-ios-surface/85 backdrop-blur-xl border-t border-ios-divider"
+      className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-ios-surface/85 backdrop-blur-xl border-t border-ios-divider"
       style={{ paddingBottom: 'var(--safe-bottom)' }}
     >
       <ul className="grid grid-cols-5 max-w-md mx-auto">

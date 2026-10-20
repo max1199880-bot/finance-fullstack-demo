@@ -116,119 +116,122 @@ export function CapitalPage() {
         }
       />
 
-      <div className="px-4">
-        <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 text-white rounded-ios-lg p-5 shadow-lg">
-          <div className="text-sm opacity-80">
-            {hasDebts && showWithDebts ? 'С учётом кредитов' : 'Net Worth'}
-          </div>
-          {/* Fluid size: exactly text-4xl (36px) from 375px wide, a bit smaller on
+      {/* Десктоп: секции в две колонки (index.css, .desktop-columns). */}
+      <div className="desktop-columns">
+        {/* Итог капитала — на десктопе во всю ширину, над колонками счетов. */}
+        <div className="px-4 desktop-span">
+          <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 text-white rounded-ios-lg p-5 shadow-lg">
+            <div className="text-sm opacity-80">
+              {hasDebts && showWithDebts ? 'С учётом кредитов' : 'Net Worth'}
+            </div>
+            {/* Fluid size: exactly text-4xl (36px) from 375px wide, a bit smaller on
               narrower phones so a 7-digit amount fits on one line; ₽ is glued to
               the number so it never wraps onto a line of its own. */}
-          <div className="text-[length:clamp(1.75rem,9.6vw,2.25rem)] leading-10 font-rounded font-bold mt-1 tabular-nums">
-            {glueRub(fmtRub(hasDebts && showWithDebts ? c.totalNetWorth : grossAssets))}
-          </div>
-          {hasDebts && showWithDebts && (
-            <div className="text-[12px] opacity-80 mt-1">
-              без кредитов — {fmtRub(grossAssets, { compact: true })}
+            <div className="text-[length:clamp(1.75rem,9.6vw,2.25rem)] leading-10 font-rounded font-bold mt-1 tabular-nums">
+              {glueRub(fmtRub(hasDebts && showWithDebts ? c.totalNetWorth : grossAssets))}
             </div>
-          )}
-          <div
-            className={`mt-3 grid gap-2 text-[12px] ${hasDebts ? 'grid-cols-2 min-[360px]:grid-cols-4' : 'grid-cols-3'}`}
-          >
-            <div className="bg-white/15 rounded-md px-2 py-1.5">
-              <div className="opacity-80">Деньги</div>
-              <div className="font-semibold tabular-nums mt-0.5 whitespace-nowrap">
-                {fmtRub(c.totalCash, { compact: true })}
+            {hasDebts && showWithDebts && (
+              <div className="text-[12px] opacity-80 mt-1">
+                без кредитов — {fmtRub(grossAssets, { compact: true })}
               </div>
-            </div>
-            <div className="bg-white/15 rounded-md px-2 py-1.5">
-              <div className="opacity-80">Инвест.</div>
-              <div className="font-semibold tabular-nums mt-0.5 whitespace-nowrap">
-                {fmtRub(c.totalInvestments, { compact: true })}
-              </div>
-            </div>
-            <div className="bg-white/15 rounded-md px-2 py-1.5">
-              <div className="opacity-80">Прочие</div>
-              <div className="font-semibold tabular-nums mt-0.5 whitespace-nowrap">
-                {fmtRub(c.totalOther, { compact: true })}
-              </div>
-            </div>
-            {hasDebts && (
-              <button
-                type="button"
-                onClick={() => {
-                  haptic('light');
-                  setShowWithDebts((v) => !v);
-                }}
-                className={`rounded-md px-2 py-1.5 text-left transition select-none-ui ${
-                  showWithDebts ? 'bg-white/90 text-rose-700 ring-2 ring-white' : 'bg-rose-500/30'
-                }`}
-              >
-                <div className="opacity-80">Кредиты</div>
-                <div className="font-semibold tabular-nums mt-0.5 whitespace-nowrap">
-                  −{fmtRub(c.totalCredits, { compact: true })}
-                </div>
-              </button>
             )}
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-5">
-        {orderedTypes.map((t) => {
-          const list = groups.get(t)!;
-          const groupTotal = list.reduce((s, a) => s + parseFloat(a.balance || '0'), 0);
-          const meta = TYPE_LABEL[t];
-          return (
-            <Card key={t} title={meta.ru}>
-              {list.map((a, i) => (
-                <ListRow
-                  key={a.id}
-                  divider={i !== list.length - 1}
+            <div
+              className={`mt-3 grid gap-2 text-[12px] ${hasDebts ? 'grid-cols-2 min-[360px]:grid-cols-4' : 'grid-cols-3'}`}
+            >
+              <div className="bg-white/15 rounded-md px-2 py-1.5">
+                <div className="opacity-80">Деньги</div>
+                <div className="font-semibold tabular-nums mt-0.5 whitespace-nowrap">
+                  {fmtRub(c.totalCash, { compact: true })}
+                </div>
+              </div>
+              <div className="bg-white/15 rounded-md px-2 py-1.5">
+                <div className="opacity-80">Инвест.</div>
+                <div className="font-semibold tabular-nums mt-0.5 whitespace-nowrap">
+                  {fmtRub(c.totalInvestments, { compact: true })}
+                </div>
+              </div>
+              <div className="bg-white/15 rounded-md px-2 py-1.5">
+                <div className="opacity-80">Прочие</div>
+                <div className="font-semibold tabular-nums mt-0.5 whitespace-nowrap">
+                  {fmtRub(c.totalOther, { compact: true })}
+                </div>
+              </div>
+              {hasDebts && (
+                <button
+                  type="button"
                   onClick={() => {
                     haptic('light');
-                    setModal({ kind: 'menu', account: a });
+                    setShowWithDebts((v) => !v);
                   }}
-                  left={
-                    <div className="flex items-center gap-3">
-                      <TintedIcon name={meta.icon} tint={TYPE_TINT[t] ?? 'accent'} size={34} />
-                      <div>
-                        <div className="font-medium">{a.name}</div>
-                        {a.quantity != null && (
-                          <div className="text-[11px] text-ios-hint mt-0.5">{a.quantity} шт</div>
-                        )}
-                        {a.type === 'credit_buffer' && (
-                          <div className="text-[11px] text-ios-hint mt-0.5">накоплено к платежу</div>
-                        )}
-                      </div>
-                    </div>
-                  }
-                  right={
-                    <span
-                      className={`tabular-nums ${
-                        a.type === 'credit'
-                          ? 'text-ios-red'
-                          : a.type === 'credit_buffer'
-                            ? 'text-ios-green'
-                            : 'text-ios-text'
-                      }`}
-                    >
-                      {a.type === 'credit' ? `−${fmtRub(a.balance)}` : fmtRub(a.balance)}
-                    </span>
-                  }
-                />
-              ))}
-              {list.length > 1 && (
-                <div className="px-4 py-2 flex justify-between text-sm border-t border-ios-divider">
-                  <span className="text-ios-hint">Подытог</span>
-                  <span className="tabular-nums font-medium">{fmtRub(groupTotal)}</span>
-                </div>
+                  className={`rounded-md px-2 py-1.5 text-left transition select-none-ui ${
+                    showWithDebts ? 'bg-white/90 text-rose-700 ring-2 ring-white' : 'bg-rose-500/30'
+                  }`}
+                >
+                  <div className="opacity-80">Кредиты</div>
+                  <div className="font-semibold tabular-nums mt-0.5 whitespace-nowrap">
+                    −{fmtRub(c.totalCredits, { compact: true })}
+                  </div>
+                </button>
               )}
-            </Card>
-          );
-        })}
-      </div>
+            </div>
+          </div>
+        </div>
 
+        <div className="mt-5 desktop-flatten">
+          {orderedTypes.map((t) => {
+            const list = groups.get(t)!;
+            const groupTotal = list.reduce((s, a) => s + parseFloat(a.balance || '0'), 0);
+            const meta = TYPE_LABEL[t];
+            return (
+              <Card key={t} title={meta.ru}>
+                {list.map((a, i) => (
+                  <ListRow
+                    key={a.id}
+                    divider={i !== list.length - 1}
+                    onClick={() => {
+                      haptic('light');
+                      setModal({ kind: 'menu', account: a });
+                    }}
+                    left={
+                      <div className="flex items-center gap-3">
+                        <TintedIcon name={meta.icon} tint={TYPE_TINT[t] ?? 'accent'} size={34} />
+                        <div>
+                          <div className="font-medium">{a.name}</div>
+                          {a.quantity != null && (
+                            <div className="text-[11px] text-ios-hint mt-0.5">{a.quantity} шт</div>
+                          )}
+                          {a.type === 'credit_buffer' && (
+                            <div className="text-[11px] text-ios-hint mt-0.5">накоплено к платежу</div>
+                          )}
+                        </div>
+                      </div>
+                    }
+                    right={
+                      <span
+                        className={`tabular-nums ${
+                          a.type === 'credit'
+                            ? 'text-ios-red'
+                            : a.type === 'credit_buffer'
+                              ? 'text-ios-green'
+                              : 'text-ios-text'
+                        }`}
+                      >
+                        {a.type === 'credit' ? `−${fmtRub(a.balance)}` : fmtRub(a.balance)}
+                      </span>
+                    }
+                  />
+                ))}
+                {list.length > 1 && (
+                  <div className="px-4 py-2 flex justify-between text-sm border-t border-ios-divider">
+                    <span className="text-ios-hint">Подытог</span>
+                    <span className="tabular-nums font-medium">{fmtRub(groupTotal)}</span>
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      </div>
       <ActionMenu modal={modal} onClose={() => setModal(null)} onPick={(next) => setModal(next)} />
       <AccountHistorySheet modal={modal} onClose={() => setModal(null)} />
       <LossSheet

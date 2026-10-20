@@ -19,7 +19,7 @@ export function UpdatePrompt() {
   if (!needRefresh) return null;
 
   return (
-    <div className="fixed inset-x-3 bottom-24 z-50 flex items-center justify-between gap-3 rounded-ios-lg bg-ios-accent px-4 py-3 text-white shadow-card">
+    <div className="fixed inset-x-3 bottom-24 lg:left-auto lg:right-6 lg:bottom-6 lg:w-96 z-50 flex items-center justify-between gap-3 rounded-ios-lg bg-ios-accent px-4 py-3 text-white shadow-card">
       <span className="text-sm font-medium">Доступна новая версия</span>
       <div className="flex items-center gap-2">
         <button type="button" onClick={() => setNeedRefresh(false)} className="text-sm opacity-80">

@@ -101,3 +101,28 @@ button {
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
+
+/* Десктоп (от 1024 px): секции экрана раскладываются в две колонки в порядке чтения —
+   сверху вниз по первой, затем по второй. Карточка целиком остаётся в своей колонке. */
+@media (min-width: 1024px) {
+  .desktop-columns {
+    column-count: 2;
+    column-gap: 1.5rem;
+  }
+  .desktop-columns > * {
+    break-inside: avoid;
+  }
+  /* Обёртка группы секций «растворяется»: её секции раскладываются по колонкам по одной,
+     а не уходят в одну колонку целым блоком. */
+  .desktop-columns > .desktop-flatten {
+    display: contents;
+  }
+  .desktop-columns > .desktop-flatten > * {
+    break-inside: avoid;
+  }
+  /* Итоговая карточка экрана — над колонками, во всю ширину. */
+  .desktop-columns > .desktop-span {
+    column-span: all;
+    margin-bottom: 1.25rem;
+  }
+}

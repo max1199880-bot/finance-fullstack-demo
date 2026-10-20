@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from
 import { applyTelegramTheme } from './lib/telegram';
 import { api } from './lib/api';
 import { trackPageView } from './lib/analytics';
+import { SideNav } from './components/SideNav';
 import { TabBar, type Tab } from './components/TabBar';
 import { Onboarding } from './components/Onboarding';
 import { OfflineBanner } from './components/OfflineBanner';
@@ -51,10 +52,9 @@ function pathToTab(pathname: string): Tab {
       return 'capital';
     case '/analytics':
       return 'analytics';
-    case '/settings':
-      return 'settings';
     default:
-      return 'home';
+      // Подстраницы настроек (/settings/categories…) — тоже раздел «Настройки» в боковой панели.
+      return pathname.startsWith('/settings') ? 'settings' : 'home';
   }
 }
 
@@ -157,50 +157,58 @@ function AppShell() {
   // from Settings.
   const showOnboarding = forcedOnboarding || (me.data && !me.data.onboardingCompleted);
 
+  // Боковая панель — на всех экранах после входа: на десктопе нижних вкладок нет, и без неё
+  // из настроек некуда было бы перейти.
+  const showSideNav = location.pathname !== '/login';
+
   return (
-    <div className="min-h-full max-w-md mx-auto">
-      <OfflineBanner />
-      <UpdatePrompt />
+    <div className={`min-h-full ${showSideNav ? 'lg:pl-64' : ''}`}>
+      {showSideNav && <SideNav active={activeTab} onChange={goTab} />}
+      {/* Ширина контента растёт ступенями: телефон — колонка 448 px, планшет — 672 px,
+          десктоп — до 1152 px, где экраны раскладываются в две колонки (класс desktop-columns). */}
+      <div className="max-w-md mx-auto md:max-w-2xl lg:max-w-6xl lg:px-6">
+        <OfflineBanner />
+        <UpdatePrompt />
 
-      {/* Пока часть экрана грузится — пустой фон того же цвета, без мигания спиннера:
+        {/* Пока часть экрана грузится — пустой фон того же цвета, без мигания спиннера:
           части маленькие и из кеша приходят за доли секунды. */}
-      <Suspense fallback={<div className="min-h-full bg-ios-bg" />}>
-        <Routes>
-          {/* Public — reachable without a session. */}
-          <Route path="/login" element={<LoginPage />} />
+        <Suspense fallback={<div className="min-h-full bg-ios-bg" />}>
+          <Routes>
+            {/* Public — reachable without a session. */}
+            <Route path="/login" element={<LoginPage />} />
 
-          {/* Everything else requires auth (session cookie or Telegram initData). */}
-          <Route element={<AuthGate />}>
-            <Route path="/" element={<HomePage onGoTo={goTab} />} />
-            <Route path="/add" element={<AddPage onDone={() => navigate('/')} />} />
-            <Route path="/budget" element={<BudgetPage />} />
-            <Route path="/capital" element={<CapitalPage />} />
-            <Route path="/analytics" element={<AnalyticsPage />} />
-            <Route
-              path="/settings"
-              element={
-                <SettingsPage
-                  onBack={() => navigate('/')}
-                  onOpenCategories={() => navigate('/settings/categories')}
-                  onOpenIncomeSources={() => navigate('/settings/income-sources')}
-                  onReplayOnboarding={() => setForcedOnboarding(true)}
-                />
-              }
-            />
-            <Route
-              path="/settings/categories"
-              element={<CategoryEditorPage onBack={() => navigate('/settings')} />}
-            />
-            <Route
-              path="/settings/income-sources"
-              element={<IncomeSourceEditorPage onBack={() => navigate('/settings')} />}
-            />
-            {/* Unknown path → home. */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        </Routes>
-      </Suspense>
-
+            {/* Everything else requires auth (session cookie or Telegram initData). */}
+            <Route element={<AuthGate />}>
+              <Route path="/" element={<HomePage onGoTo={goTab} />} />
+              <Route path="/add" element={<AddPage onDone={() => navigate('/')} />} />
+              <Route path="/budget" element={<BudgetPage />} />
+              <Route path="/capital" element={<CapitalPage />} />
+              <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route
+                path="/settings"
+                element={
+                  <SettingsPage
+                    onBack={() => navigate('/')}
+                    onOpenCategories={() => navigate('/settings/categories')}
+                    onOpenIncomeSources={() => navigate('/settings/income-sources')}
+                    onReplayOnboarding={() => setForcedOnboarding(true)}
+                  />
+                }
+              />
+              <Route
+                path="/settings/categories"
+                element={<CategoryEditorPage onBack={() => navigate('/settings')} />}
+              />
+              <Route
+                path="/settings/income-sources"
+                element={<IncomeSourceEditorPage onBack={() => navigate('/settings')} />}
+              />
+              {/* Unknown path → home. */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
+          </Routes>
+        </Suspense>
+      </div>
       {showTabBar && <TabBar active={activeTab} onChange={goTab} />}
 
       {location.pathname !== '/login' && (

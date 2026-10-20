@@ -22,14 +22,14 @@ export function Sheet({
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center md:p-6">
       <div className="absolute inset-0 bg-black/40 animate-[fadeIn_0.18s_ease-out]" onClick={onClose} />
       <div
-        className="relative w-full max-w-md bg-ios-bg rounded-t-3xl shadow-2xl pb-4 animate-[slideUp_0.22s_ease-out]"
+        className="relative w-full max-w-md bg-ios-bg rounded-t-3xl shadow-2xl pb-4 animate-[slideUp_0.22s_ease-out] md:max-w-lg md:rounded-3xl md:animate-[fadeIn_0.18s_ease-out]"
         style={{ paddingBottom: 'calc(var(--safe-bottom) + 1rem)' }}
         role="dialog"
       >
-        <div className="flex justify-center pt-2 pb-1">
+        <div className="flex justify-center pt-2 pb-1 md:invisible">
           <div className="w-9 h-1 rounded-full bg-ios-divider" />
         </div>
         {title && (

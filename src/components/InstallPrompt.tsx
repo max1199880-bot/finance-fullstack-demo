@@ -100,7 +100,7 @@ export function InstallPrompt() {
 
 function Banner({ children, onDismiss }: { children: React.ReactNode; onDismiss: () => void }) {
   return (
-    <div className="fixed inset-x-3 bottom-24 z-40 flex items-center gap-3 rounded-ios-lg bg-ios-surface p-3 shadow-card">
+    <div className="fixed inset-x-3 bottom-24 lg:left-auto lg:right-6 lg:bottom-6 lg:w-96 z-40 flex items-center gap-3 rounded-ios-lg bg-ios-surface p-3 shadow-card">
       {children}
       <button
         type="button"

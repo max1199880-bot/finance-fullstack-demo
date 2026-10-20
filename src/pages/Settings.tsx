@@ -55,98 +55,101 @@ export function SettingsPage({
         }
       />
 
-      <Card title="Профиль">
-        <ListRow left="Валюта" right={<span>{me.data.currency}</span>} divider />
-        <ListRow left="Таймзона" right={<span>{me.data.timezone}</span>} divider={false} />
-      </Card>
+      {/* Десктоп: секции в две колонки (index.css, .desktop-columns). */}
+      <div className="desktop-columns">
+        <Card title="Профиль">
+          <ListRow left="Валюта" right={<span>{me.data.currency}</span>} divider />
+          <ListRow left="Таймзона" right={<span>{me.data.timezone}</span>} divider={false} />
+        </Card>
 
-      <Card title="Месяц">
-        <ListRow
-          left="Начало месяца"
-          right={<span className="text-ios-accent">{me.data.monthStartDay}-е число</span>}
-          divider={false}
-        />
-        <div className="px-4 pb-3 grid grid-cols-7 gap-1.5">
-          {Array.from({ length: 28 }).map((_, i) => {
-            const d = i + 1;
-            const active = me.data!.monthStartDay === d;
-            return (
+        <Card title="Месяц">
+          <ListRow
+            left="Начало месяца"
+            right={<span className="text-ios-accent">{me.data.monthStartDay}-е число</span>}
+            divider={false}
+          />
+          <div className="px-4 pb-3 grid grid-cols-7 gap-1.5">
+            {Array.from({ length: 28 }).map((_, i) => {
+              const d = i + 1;
+              const active = me.data!.monthStartDay === d;
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => update.mutate({ monthStartDay: d })}
+                  className={`py-2 rounded-md text-sm font-medium transition ${
+                    active ? 'bg-ios-accent text-white' : 'bg-ios-surface2 dark:bg-black/20 text-ios-subtext'
+                  }`}
+                >
+                  {d}
+                </button>
+              );
+            })}
+          </div>
+        </Card>
+
+        <IconThemeCard />
+
+        <Card title="Категории и источники">
+          <ListRow
+            left={<span>Категории расходов</span>}
+            right={
               <button
-                key={d}
                 type="button"
-                onClick={() => update.mutate({ monthStartDay: d })}
-                className={`py-2 rounded-md text-sm font-medium transition ${
-                  active ? 'bg-ios-accent text-white' : 'bg-ios-surface2 dark:bg-black/20 text-ios-subtext'
-                }`}
+                onClick={() => onOpenCategories?.()}
+                className="text-ios-accent text-sm font-medium"
               >
-                {d}
+                Открыть →
               </button>
-            );
-          })}
-        </div>
-      </Card>
+            }
+            divider
+          />
+          <ListRow
+            left={<span>Источники дохода</span>}
+            right={
+              <button
+                type="button"
+                onClick={() => onOpenIncomeSources?.()}
+                className="text-ios-accent text-sm font-medium"
+              >
+                Открыть →
+              </button>
+            }
+            divider={false}
+          />
+        </Card>
 
-      <IconThemeCard />
-
-      <Card title="Категории и источники">
-        <ListRow
-          left={<span>Категории расходов</span>}
-          right={
-            <button
-              type="button"
-              onClick={() => onOpenCategories?.()}
-              className="text-ios-accent text-sm font-medium"
-            >
-              Открыть →
-            </button>
-          }
-          divider
-        />
-        <ListRow
-          left={<span>Источники дохода</span>}
-          right={
-            <button
-              type="button"
-              onClick={() => onOpenIncomeSources?.()}
-              className="text-ios-accent text-sm font-medium"
-            >
-              Открыть →
-            </button>
-          }
-          divider={false}
-        />
-      </Card>
-
-      {/* HiddenAccountsCard moved to Analytics → "Куплено и продано".
+        {/* HiddenAccountsCard moved to Analytics → "Куплено и продано".
           Users wanted the sold-assets view next to other historical data,
           not buried in Settings. Restore/purge for an accidentally-hidden
           account still works via the API; the helper here is just gone. */}
-      <HiddenCategoriesCard />
+        <HiddenCategoriesCard />
 
-      <Card title="Помощь и обратная связь">
-        <ListRow
-          left={<span>Показать инструкцию</span>}
-          right={
-            <button
-              type="button"
-              onClick={() => onReplayOnboarding?.()}
-              className="text-ios-accent text-sm font-medium"
-            >
-              Пройти заново →
-            </button>
-          }
-          divider
-        />
-        <FeedbackRow />
-      </Card>
+        <Card title="Помощь и обратная связь">
+          <ListRow
+            left={<span>Показать инструкцию</span>}
+            right={
+              <button
+                type="button"
+                onClick={() => onReplayOnboarding?.()}
+                className="text-ios-accent text-sm font-medium"
+              >
+                Пройти заново →
+              </button>
+            }
+            divider
+          />
+          <FeedbackRow />
+        </Card>
 
-      <Card title="О приложении">
-        <ListRow left="Версия" right={<span className="text-ios-hint">0.1.0</span>} divider={false} />
-      </Card>
+        <Card title="О приложении">
+          <ListRow left="Версия" right={<span className="text-ios-hint">0.1.0</span>} divider={false} />
+        </Card>
 
-      {/* Logout only makes sense in the standalone PWA — inside Telegram the
+        {/* Logout only makes sense in the standalone PWA — inside Telegram the
           user just closes the Mini App window. */}
-      {!isInsideTelegram() && <LogoutCard />}
+        {!isInsideTelegram() && <LogoutCard />}
+      </div>
     </div>
   );
 }
