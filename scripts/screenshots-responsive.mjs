@@ -51,4 +51,8 @@ for (const w of WIDTHS) {
   await ctx.close();
 }
 await browser.close();
-console.log(problems.length ? `Проблемы:\n${problems.join('\n')}` : 'Горизонтальной прокрутки нет');
+if (problems.length) {
+  console.error(`Проблемы:\n${problems.join('\n')}`);
+  process.exit(1);
+}
+console.log('Горизонтальной прокрутки нет');
