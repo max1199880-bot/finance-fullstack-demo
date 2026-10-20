@@ -13,7 +13,7 @@
 
 | Документ | Что в нём |
 |---|---|
-| [integration_documentation.md](integration_documentation.md) | **ДЗ 6:** CI/CD, вход через Google, Яндекс.Метрика, мониторинг, логирование, оптимизация, работа с AI |
+| [integration_documentation.md](integration_documentation.md) | **ДЗ 6:** CI/CD, вход через Google, Google Analytics 4, мониторинг, логирование, оптимизация, работа с AI |
 | [security_audit.md](security_audit.md) | **ДЗ 6:** аудит безопасности — 29 находок, исправления, принятые риски |
 | [backend_documentation.md](backend_documentation.md) | **ДЗ 5:** архитектура бэкенда, модель данных, все эндпоинты API |
 
@@ -34,7 +34,7 @@
 | Вход | Supabase Auth: почта и пароль, токены обновляются сами |
 | Тесты | Vitest: 63 интеграционных против живого бэкенда (из них 16 — регрессии по аудиту) + 55 на экраны |
 | CI/CD | GitHub Actions: линтер, типы, тесты, Supabase в контейнере, деплой из main, мониторинг каждые 15 минут |
-| Интеграции | Вход через Google (OAuth2 + PKCE) · Яндекс.Метрика без персональных данных |
+| Интеграции | Вход через Google (OAuth2 + PKCE) · Google Analytics 4 без персональных данных |
 
 ## Запуск
 

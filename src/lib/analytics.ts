@@ -1,24 +1,30 @@
-// Яндекс.Метрика: просмотры экранов и цели на ключевые действия.
+// Google Analytics 4: просмотры экранов и события на ключевые действия.
 //
 // Что сознательно НЕ отправляется. Это приложение личных финансов, поэтому:
-//   • вебвизор выключен — он записывал бы экран целиком, вместе с суммами и комментариями;
-//   • карта кликов выключена по той же причине;
-//   • в параметрах целей только тип действия ('expense', 'google'), никаких сумм, имён
-//     категорий, комментариев и идентификаторов;
-//   • в адресе страницы отрезаются query и hash — туда могут попасть данные формы.
+//   • «улучшенная статистика» GA выключена в настройках потока — она сама слала бы
+//     просмотры с полным адресом (включая одноразовый ?code= после входа через Google)
+//     и взаимодействия с формами;
+//   • рекламные сигналы и Google Signals выключены, согласие на рекламное хранилище — «нет»;
+//   • в параметрах событий только тип действия ('expense', 'google'), никаких сумм, имён
+//     категорий, комментариев и идентификаторов — тип GoalParams это гарантирует;
+//   • в адресе страницы отрезаются query и hash.
 //
-// Счётчик подключается только в собранном приложении и только если задан его номер:
-// в разработке и тестах Метрика не грузится и данных не искажает.
+// Тег подключается только в собранном приложении и только если задан идентификатор:
+// в разработке и тестах аналитика не грузится и данных не искажает.
+//
+// Историческое название функции trackGoal оставлено: события те же, что в первой версии
+// на Яндекс.Метрике (её интерфейс оказался недоступен через VPN, см. integration_documentation.md).
 
 declare global {
   interface Window {
-    ym?: (id: number, method: string, ...args: unknown[]) => void;
+    dataLayer?: unknown[];
+    gtag?: (...args: unknown[]) => void;
   }
 }
 
-const COUNTER_ID = Number(import.meta.env.VITE_YM_ID ?? 0);
+const MEASUREMENT_ID = (import.meta.env.VITE_GA_ID as string | undefined) ?? '';
 
-/** Цели, которые приложение отправляет. Их же нужно завести в Метрике как «JavaScript-событие». */
+/** События, которые отправляет приложение. В GA их можно отметить как ключевые. */
 export const GOALS = {
   login: 'auth_login',
   signup: 'auth_signup',
@@ -36,8 +42,8 @@ export const GOALS = {
 export type Goal = (typeof GOALS)[keyof typeof GOALS];
 
 /**
- * Параметры цели — только значения из этого списка. Тип закрыт намеренно: строка
- * произвольного вида пропустила бы в Метрику сумму или комментарий, а здесь это
+ * Параметры события — только значения из этого списка. Тип закрыт намеренно: строка
+ * произвольного вида пропустила бы в аналитику сумму или комментарий, а здесь это
  * ошибка компиляции.
  */
 export type GoalLabel =
@@ -67,50 +73,54 @@ function respectsDoNotTrack(): boolean {
   return navigator.doNotTrack === '1' || (window as { doNotTrack?: string }).doNotTrack === '1';
 }
 
-/** Адрес без query и hash: в них бывают данные формы и токены возврата после входа. */
+/** Адрес без query и hash: в них бывают данные формы и одноразовые коды возврата после входа. */
 function cleanUrl(path: string = location.pathname): string {
   return `${location.origin}${path.split(/[?#]/)[0]}`;
 }
 
 export function initAnalytics(): void {
-  if (enabled || !COUNTER_ID || !import.meta.env.PROD || respectsDoNotTrack()) return;
+  if (enabled || !MEASUREMENT_ID || !import.meta.env.PROD || respectsDoNotTrack()) return;
 
-  // Официальный загрузчик счётчика: очередь вызовов до загрузки скрипта.
-  const queue: unknown[][] = [];
-  window.ym =
-    window.ym ??
-    ((...args: unknown[]) => {
-      queue.push(args);
-    });
-  Object.assign(window.ym, { a: queue, l: Date.now() });
+  window.dataLayer = window.dataLayer ?? [];
+  // gtag обязан класть в очередь именно объект arguments — так устроен загрузчик Google.
+  window.gtag = function gtag() {
+    // eslint-disable-next-line prefer-rest-params
+    window.dataLayer!.push(arguments);
+  };
+
+  // Рекламное хранилище и персонализация — запрещены; разрешена только статистика.
+  window.gtag('consent', 'default', {
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+    analytics_storage: 'granted',
+  });
+  window.gtag('js', new Date());
+  window.gtag('config', MEASUREMENT_ID, {
+    send_page_view: false, // у нас SPA: просмотры отправляем сами, с очищенным адресом
+    allow_google_signals: false,
+    allow_ad_personalization_signals: false,
+    page_location: cleanUrl(),
+    page_referrer: document.referrer ? document.referrer.split(/[?#]/)[0] : undefined,
+  });
 
   const script = document.createElement('script');
   script.async = true;
-  script.src = 'https://mc.yandex.ru/metrika/tag.js';
+  script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(MEASUREMENT_ID)}`;
   document.head.appendChild(script);
-
-  window.ym(COUNTER_ID, 'init', {
-    defer: true, // просмотры отправляем сами при смене экрана — у нас SPA
-    webvisor: false,
-    clickmap: false,
-    trackLinks: true,
-    accurateTrackBounce: true,
-    url: cleanUrl(),
-    referrer: document.referrer ? document.referrer.split(/[?#]/)[0] : undefined,
-  });
   enabled = true;
 }
 
 /** Просмотр экрана. Вызывается при каждой смене маршрута. */
 export function trackPageView(path: string): void {
-  if (!enabled || !window.ym) return;
-  window.ym(COUNTER_ID, 'hit', cleanUrl(path), { title: document.title });
+  if (!enabled || !window.gtag) return;
+  window.gtag('event', 'page_view', { page_location: cleanUrl(path), page_title: document.title });
 }
 
-/** Цель на ключевое действие. Параметры — только метки из GoalLabel. */
+/** Событие на ключевое действие. Параметры — только метки из GoalLabel. */
 export function trackGoal(goal: Goal, params?: GoalParams): void {
-  if (!enabled || !window.ym) return;
-  window.ym(COUNTER_ID, 'reachGoal', goal, params);
+  if (!enabled || !window.gtag) return;
+  window.gtag('event', goal, params ?? {});
 }
 
 export const analyticsEnabled = () => enabled;

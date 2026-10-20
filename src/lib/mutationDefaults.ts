@@ -164,7 +164,7 @@ export function registerMutationDefaults(qc: QueryClient): void {
   };
 
   // Цели аналитики — только после успеха и только тип действия: сумма, категория
-  // и комментарий в Метрику не уходят (см. lib/analytics.ts).
+  // и комментарий в аналитику не уходят (см. lib/analytics.ts).
   qc.setMutationDefaults(MUTATION_KEYS.addTx, {
     mutationFn: runAddTx,
     onSuccess: (_data: unknown, v: AddTxVariables) => {

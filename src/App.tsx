@@ -71,7 +71,7 @@ function AppShell() {
   const [forcedOnboarding, setForcedOnboarding] = useState(false);
 
   // Приложение одностраничное: браузер не перезагружает страницу, поэтому просмотр
-  // экрана отправляем в Метрику сами при каждой смене маршрута.
+  // экрана отправляем в аналитику сами при каждой смене маршрута.
   useEffect(() => {
     trackPageView(location.pathname);
   }, [location.pathname]);
