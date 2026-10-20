@@ -163,14 +163,19 @@ export function registerMutationDefaults(qc: QueryClient): void {
     qc.invalidateQueries({ queryKey: ['asset-investments'] });
   };
 
-  // Цели аналитики — только после успеха и только тип действия: сумма, категория
+  // События аналитики — только после успеха и только тип действия: сумма, категория
   // и комментарий в аналитику не уходят (см. lib/analytics.ts).
+  //
+  // Событие отправляется внутри mutationFn, а не в onSuccess. Страницы передают в
+  // useMutation свой onSuccess, и TanStack Query им ЗАМЕНЯЕТ onSuccess из этих настроек.
+  // В первой версии события из-за этого уходили только у офлайн-операций, досланных позже.
   qc.setMutationDefaults(MUTATION_KEYS.addTx, {
-    mutationFn: runAddTx,
-    onSuccess: (_data: unknown, v: AddTxVariables) => {
+    mutationFn: async (v: AddTxVariables) => {
+      const result = await runAddTx(v);
       if (v.kind === 'credit_payment') trackGoal(GOALS.creditPayment);
       else if (v.kind === 'purchase') trackGoal(GOALS.assetPurchase, { type: v.assetType as GoalLabel });
       else trackGoal(GOALS.txCreate, { type: (v.kind === 'transfer' ? v.type : v.kind) as GoalLabel });
+      return result;
     },
     onSettled: invalidateAll,
   });
@@ -181,14 +186,20 @@ export function registerMutationDefaults(qc: QueryClient): void {
   });
 
   qc.setMutationDefaults(MUTATION_KEYS.updateTx, {
-    mutationFn: (v: UpdateTxVariables) => api.updateTransaction(v.id, v.patch),
-    onSuccess: () => trackGoal(GOALS.txEdit),
+    mutationFn: async (v: UpdateTxVariables) => {
+      const result = await api.updateTransaction(v.id, v.patch);
+      trackGoal(GOALS.txEdit);
+      return result;
+    },
     onSettled: invalidateAll,
   });
 
   qc.setMutationDefaults(MUTATION_KEYS.deleteTx, {
-    mutationFn: (v: DeleteTxVariables) => api.deleteTransaction(v.id),
-    onSuccess: () => trackGoal(GOALS.txDelete),
+    mutationFn: async (v: DeleteTxVariables) => {
+      const result = await api.deleteTransaction(v.id);
+      trackGoal(GOALS.txDelete);
+      return result;
+    },
     onSettled: invalidateAll,
   });
 }
