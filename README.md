@@ -34,7 +34,7 @@
 | Вход | Supabase Auth: почта и пароль, токены обновляются сами |
 | Тесты | Vitest: 63 интеграционных против живого бэкенда (из них 16 — регрессии по аудиту) + 55 на экраны |
 | CI/CD | GitHub Actions: линтер, типы, тесты, Supabase в контейнере, деплой из main, мониторинг каждые 15 минут |
-| Интеграции | Вход через Google (OAuth2 + PKCE) · Google Analytics 4 без персональных данных |
+| Интеграции | Вход через Google (ID-токен, OpenID Connect) · Google Analytics 4 без персональных данных |
 
 ## Запуск
 
@@ -56,7 +56,7 @@ npm run dev
 |---|---|
 | `npm run dev` | Дев-сервер фронтенда |
 | `npm run build` | Проверка типов и сборка в `dist/` |
-| `npm test` | 55 тестов: экраны и демо-сервер (Vitest + Testing Library) |
+| `npm test` | 60 тестов: экраны, демо-сервер, события аналитики, nonce входа Google (Vitest + Testing Library) |
 | `npm run test:api` | 63 интеграционных теста API против локального Supabase |
 | `npm run lint` · `npm run format:check` | ESLint и Prettier — те же проверки, что в CI |
 | `node scripts/analyze-logs.mjs --local` | Разбор логов API через AI (см. документацию) |

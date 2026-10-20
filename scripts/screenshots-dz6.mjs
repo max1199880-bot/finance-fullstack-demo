@@ -61,6 +61,15 @@ const mobile = await browser.newContext({
   locale: 'ru-RU',
   colorScheme: 'dark',
 });
-await shot(mobile, `${APP}/login`, 'login-google', { wait: 'Войти через Google' });
+// Кнопку Google рисует сам Google во фрейме — ждём фрейм, а не текст.
+{
+  const page = await mobile.newPage();
+  await page.goto(`${APP}/login`, { waitUntil: 'networkidle', timeout: 60_000 });
+  await page.locator('iframe[src*="accounts.google.com/gsi/button"]').waitFor({ timeout: 30_000 });
+  await page.waitForTimeout(1500);
+  await page.screenshot({ path: out('login-google.png') });
+  await page.close();
+  console.log('✓ login-google');
+}
 
 await browser.close();
