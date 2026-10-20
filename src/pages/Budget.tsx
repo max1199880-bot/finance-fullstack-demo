@@ -9,6 +9,8 @@ import { AmountKeypad } from '../components/AmountKeypad';
 import { IncomeSourceList } from '../components/IncomeSourceList';
 import { fmtRub, fmtMonth, categoryEmoji, STATUS_COLOR } from '../lib/format';
 import { haptic } from '../lib/telegram';
+import { loadFailure } from '../lib/queryState';
+import { LoadError } from '../components/LoadError';
 
 export function BudgetPage() {
   // No /api/me waterfall — server picks current month from user.monthStartDay.
@@ -23,13 +25,16 @@ export function BudgetPage() {
     row?: BudgetCategoryRow;
   } | null>(null);
 
-  if (budget.isLoading || !budget.data)
+  // Ошибка/офлайн без кеша — заглушка с «Повторить», иначе скелетон висел бы вечно.
+  if (!budget.data) {
+    if (loadFailure(budget)) return <LoadError query={budget} />;
     return (
       <div className="p-4 space-y-4">
         <div className="h-8 w-32 bg-ios-surface rounded-md animate-pulse" />
         <div className="h-72 bg-ios-surface rounded-ios-lg animate-pulse" />
       </div>
     );
+  }
 
   const b = budget.data;
 

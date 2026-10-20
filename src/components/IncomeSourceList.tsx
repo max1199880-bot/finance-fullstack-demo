@@ -6,6 +6,8 @@ import { Sheet } from './Sheet';
 import { EmojiPicker } from './EmojiPicker';
 import { categoryEmoji } from '../lib/format';
 import { haptic } from '../lib/telegram';
+import { loadFailure } from '../lib/queryState';
+import { LoadError } from './LoadError';
 
 /**
  * Embeddable list/editor for income sources. Used both by the dedicated
@@ -133,7 +135,18 @@ export function IncomeSourceList({
         </div>
       )}
       <div className={compact ? 'overflow-hidden' : 'bg-ios-surface rounded-ios-lg overflow-hidden'}>
-        {(active.data ?? []).length === 0 && (
+        {/* Пока идёт запрос или он упал, «Нет источников» было бы ложью: список просто не загружен. */}
+        {!active.data &&
+          (loadFailure(active) ? (
+            <LoadError query={active} compact />
+          ) : (
+            <div className="space-y-2 py-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-12 bg-ios-surface rounded-ios animate-pulse" />
+              ))}
+            </div>
+          ))}
+        {active.data?.length === 0 && (
           <div className="px-4 py-4 text-sm text-ios-hint">Нет источников. Создай первый ниже.</div>
         )}
         {(active.data ?? []).map((s, i, arr) => (
@@ -175,6 +188,12 @@ export function IncomeSourceList({
       >
         ＋ Новый источник
       </button>
+
+      {showHidden && loadFailure(hidden) && (
+        <div className="mt-4 bg-ios-surface rounded-ios-lg">
+          <LoadError query={hidden} title="Не удалось загрузить скрытые источники" compact />
+        </div>
+      )}
 
       {showHidden && hidden.data && hidden.data.length > 0 && (
         <>

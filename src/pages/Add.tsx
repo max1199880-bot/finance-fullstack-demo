@@ -11,6 +11,8 @@ import { CategoryQuickEdit, AddCategorySheet, type QuickCategory } from '../comp
 import { fmtRub } from '../lib/format';
 import { CategoryIcon } from '../lib/iconTheme';
 import { haptic } from '../lib/telegram';
+import { loadFailure } from '../lib/queryState';
+import { LoadError } from '../components/LoadError';
 
 const MAX_EXPENSE_CATEGORIES = 12;
 
@@ -120,6 +122,20 @@ export function AddPage({ onDone }: { onDone: () => void }) {
     staleTime: 30_000,
   });
   const pickedCredit = credits.data?.find((c) => c.id === creditId) ?? null;
+
+  // Справочник, который нужен на текущем шаге выбора. Если он не загрузился, пикер
+  // выглядел бы пустым («нет счетов»/ничего), а при ошибке кредитов — просто пропадал.
+  const stepQuery =
+    mode === 'expense'
+      ? !pickedId
+        ? expCats
+        : isCreditCat && !creditId
+          ? credits
+          : accounts
+      : mode === 'income' && !pickedId
+        ? sources
+        : accounts;
+  const pickFailure = loadFailure(stepQuery) ? stepQuery : null;
 
   // Auto-select when there's exactly one credit — the user taps "Кредит" and
   // lands straight on the source-account step, no credit picker in between.
@@ -418,7 +434,8 @@ export function AddPage({ onDone }: { onDone: () => void }) {
         </div>
       </div>
 
-      {step === 'pick' && (
+      {step === 'pick' && pickFailure && <LoadError query={pickFailure} compact />}
+      {step === 'pick' && !pickFailure && (
         <div className="mt-4 px-4">
           {mode === 'expense' && !pickedId && (
             <ExpensePicker

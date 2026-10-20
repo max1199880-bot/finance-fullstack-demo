@@ -9,6 +9,8 @@ import { TransactionEditor } from '../components/TransactionEditor';
 import { DateDivider } from '../components/DateDivider';
 import { fmtRub, fmtMonth, fmtDate, categoryEmoji, dayKey } from '../lib/format';
 import { haptic } from '../lib/telegram';
+import { loadFailure } from '../lib/queryState';
+import { LoadError } from '../components/LoadError';
 
 // The account a transaction moved money on: the SOURCE account for an expense
 // (where the money was debited from) and the DESTINATION account for an income
@@ -38,33 +40,7 @@ export function HomePage({
   // so these checks must run before the skeleton — otherwise the screen stays
   // on the skeleton forever when the server can't be reached and there's no
   // cached snapshot yet. With cached data we keep showing it instead.
-  if (!boot.data) {
-    if (boot.isError) {
-      return (
-        <LoadError
-          title="Не удалось загрузить данные"
-          text={
-            boot.error instanceof TypeError
-              ? 'Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.'
-              : (boot.error as Error).message
-          }
-          retrying={boot.isFetching}
-          onRetry={() => boot.refetch()}
-        />
-      );
-    }
-    if (boot.fetchStatus === 'paused') {
-      return (
-        <LoadError
-          title="Нет сети"
-          text="Данные появятся, как только вернётся связь."
-          retrying={false}
-          onRetry={() => boot.refetch()}
-        />
-      );
-    }
-    return <Skeleton />;
-  }
+  if (!boot.data) return loadFailure(boot) ? <LoadError query={boot} /> : <Skeleton />;
 
   const s = boot.data.summary;
   const cap = boot.data.capitalTotals;
@@ -513,7 +489,7 @@ function AllTransactionsSheet({ onClose }: { onClose: () => void }) {
               <span>Выберите даты периода</span>
             ) : txQuery.isLoading ? (
               <span>Загрузка…</span>
-            ) : (
+            ) : loadFailure(txQuery) ? null : (
               <>
                 <span>{displayed.length} операций</span>
                 {totals.income > 0 && (
@@ -533,6 +509,8 @@ function AllTransactionsSheet({ onClose }: { onClose: () => void }) {
                 <div key={i} className="h-10 bg-ios-surface rounded animate-pulse" />
               ))}
             </div>
+          ) : loadFailure(txQuery) ? (
+            <LoadError query={txQuery} compact />
           ) : displayed.length === 0 ? (
             <div className="py-12 text-center text-ios-hint text-sm">Операций нет</div>
           ) : (
@@ -619,37 +597,6 @@ function TxFilterChip({
     >
       {children}
     </button>
-  );
-}
-
-function LoadError({
-  title,
-  text,
-  retrying,
-  onRetry,
-}: {
-  title: string;
-  text: string;
-  retrying: boolean;
-  onRetry: () => void;
-}) {
-  return (
-    <div className="pb-28 px-6 pt-24 text-center">
-      <div className="text-5xl">📡</div>
-      <div className="mt-3 text-lg font-semibold">{title}</div>
-      <p className="mt-1.5 text-sm text-ios-hint leading-snug">{text}</p>
-      <button
-        type="button"
-        onClick={() => {
-          haptic('light');
-          onRetry();
-        }}
-        disabled={retrying}
-        className="mt-5 px-6 py-3 rounded-ios bg-ios-accent text-white font-semibold active:opacity-80 disabled:opacity-60 select-none-ui"
-      >
-        {retrying ? 'Повторяю…' : 'Повторить'}
-      </button>
-    </div>
   );
 }
 

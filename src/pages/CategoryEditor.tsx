@@ -7,6 +7,8 @@ import { Sheet } from '../components/Sheet';
 import { EmojiPicker } from '../components/EmojiPicker';
 import { categoryEmoji } from '../lib/format';
 import { haptic } from '../lib/telegram';
+import { loadFailure } from '../lib/queryState';
+import { LoadError } from '../components/LoadError';
 
 const MIN_EXPENSE = 6;
 const MAX_EXPENSE = 12;
@@ -84,15 +86,19 @@ export function CategoryEditorPage({ onBack }: { onBack: () => void }) {
     });
   };
 
-  if (all.isLoading || !all.data) {
+  if (!all.data) {
     return (
       <div className="pb-6">
         <Header title="Категории" right={<HeaderBack onClick={onBack} />} />
-        <div className="px-4 mt-3 space-y-2">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="h-12 bg-ios-surface rounded-ios-lg animate-pulse" />
-          ))}
-        </div>
+        {loadFailure(all) ? (
+          <LoadError query={all} compact />
+        ) : (
+          <div className="px-4 mt-3 space-y-2">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="h-12 bg-ios-surface rounded-ios-lg animate-pulse" />
+            ))}
+          </div>
+        )}
       </div>
     );
   }

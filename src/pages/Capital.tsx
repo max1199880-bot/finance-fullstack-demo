@@ -18,6 +18,8 @@ import { DateDivider } from '../components/DateDivider';
 import { fmtRub, fmtDate, categoryEmoji, dayKey } from '../lib/format';
 import { haptic } from '../lib/telegram';
 import { AppIcon, TintedIcon, TYPE_TINT, type IconName } from '../components/AppIcon';
+import { loadFailure } from '../lib/queryState';
+import { LoadError } from '../components/LoadError';
 
 const TYPE_LABEL: Record<string, { ru: string; icon: IconName }> = {
   bank: { ru: 'Банк', icon: 'bank' },
@@ -60,13 +62,16 @@ export function CapitalPage() {
   // switch to net worth WITH debts subtracted.
   const [showWithDebts, setShowWithDebts] = useState(false);
 
-  if (cap.isLoading || !cap.data)
+  // Ошибка/офлайн без кеша — заглушка с «Повторить», иначе скелетон висел бы вечно.
+  if (!cap.data) {
+    if (loadFailure(cap)) return <LoadError query={cap} />;
     return (
       <div className="p-4 space-y-4">
         <div className="h-8 w-32 bg-ios-surface rounded-md animate-pulse" />
         <div className="h-40 bg-ios-surface rounded-ios-lg animate-pulse" />
       </div>
     );
+  }
 
   const c = cap.data;
   // Debts are stored as a positive total and subtracted inside totalNetWorth, so
@@ -448,6 +453,8 @@ function AccountHistorySheet({ modal, onClose }: { modal: Modal | null; onClose:
               <div key={i} className="h-12 bg-ios-surface rounded animate-pulse" />
             ))}
           </div>
+        ) : loadFailure(q) ? (
+          <LoadError query={q} compact />
         ) : items.length === 0 ? (
           <div className="py-12 text-center text-ios-hint text-sm">Движений по счёту пока нет</div>
         ) : (
@@ -1039,6 +1046,9 @@ function ConfirmDelete({ modal, onClose }: { modal: Modal | null; onClose: () =>
   const a = modal.account;
   const n = txCount.data?.count ?? null;
   const loading = txCount.isLoading;
+  // Не смогли посчитать операции — нельзя показывать «Операций нет» и кнопку простого
+  // удаления: пользователь решил бы, что счёт чистый, хотя связанные операции есть.
+  const countFailed = loadFailure(txCount) !== null;
   const busy = softDelete.isPending || purge.isPending;
   const hasTransactions = n !== null && n > 0;
 
@@ -1057,6 +1067,8 @@ function ConfirmDelete({ modal, onClose }: { modal: Modal | null; onClose: () =>
           <div className="text-sm text-ios-hint mt-0.5">{fmtRub(a.balance)}</div>
           {loading ? (
             <div className="text-xs text-ios-hint mt-2">Считаю операции…</div>
+          ) : countFailed ? (
+            <LoadError query={txCount} title="Не удалось посчитать операции" compact />
           ) : hasTransactions ? (
             <div className="text-xs text-ios-hint mt-2">
               Связано <span className="font-semibold text-ios-text">{n}</span>{' '}
@@ -1071,7 +1083,7 @@ function ConfirmDelete({ modal, onClose }: { modal: Modal | null; onClose: () =>
             Otherwise we ALWAYS offer purge as the prominent option so the
             user gets exactly what they asked for, and keep "Скрыть" as a
             secondary opt-in instead of the silent default. */}
-        {!loading && !hasTransactions && (
+        {!loading && !countFailed && !hasTransactions && (
           <div className="flex gap-2 pt-1">
             <button
               type="button"
@@ -1091,7 +1103,7 @@ function ConfirmDelete({ modal, onClose }: { modal: Modal | null; onClose: () =>
           </div>
         )}
 
-        {!loading && hasTransactions && (
+        {!loading && !countFailed && hasTransactions && (
           <div className="space-y-2">
             <div className="text-sm text-ios-subtext leading-snug px-1">
               Выбери, что сделать со счётом и его историей:
@@ -1478,7 +1490,9 @@ function InvestmentsSheet({ modal, onClose }: { modal: Modal | null; onClose: ()
           </div>
         </div>
 
-        {q.isLoading || !d ? (
+        {loadFailure(q) ? (
+          <LoadError query={q} compact />
+        ) : q.isLoading || !d ? (
           <div className="h-24 bg-ios-surface rounded-ios-lg animate-pulse" />
         ) : (
           <>

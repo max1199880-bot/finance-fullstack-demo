@@ -6,6 +6,8 @@ import { Card } from '../components/Card';
 import { LineChart, BarChart, CategoryBars, CategoryDonut } from '../components/charts';
 import { fmtRub, fmtDayHeader } from '../lib/format';
 import { haptic } from '../lib/telegram';
+import { loadFailure } from '../lib/queryState';
+import { LoadError } from '../components/LoadError';
 
 type Preset = '7d' | '30d' | 'thisMonth' | 'prevMonth' | '90d' | '180d' | '1y';
 
@@ -119,6 +121,23 @@ export function AnalyticsPage() {
     staleTime: 5_000,
   });
 
+  // Блоки экрана грузятся независимо. Если упали ВСЕ — одна общая заглушка с одним
+  // «Повторить» (иначе семь одинаковых ошибок подряд). Если упали не все — ошибка
+  // показывается только в своём блоке, а загруженные блоки остаются на месте.
+  // `capital` не в списке: он нужен лишь как необязательное дополнение к карточке капитала.
+  const blocks = [summary, byCat, daily, incomeBySource, nwHistory, investHistory, soldAssets];
+  const everythingFailed = blocks.every((q) => loadFailure(q));
+  const retryAll = () => Promise.all([...blocks, capital].map((q) => q.refetch()));
+  const failedAll = {
+    data: undefined,
+    isError: blocks.some((q) => q.isError),
+    error: blocks.find((q) => q.isError)?.error,
+    isFetching: blocks.some((q) => q.isFetching),
+    // Нет ни одной настоящей ошибки — значит все запросы просто ждут сеть.
+    fetchStatus: blocks.some((q) => q.isError) ? ('idle' as const) : ('paused' as const),
+    refetch: retryAll,
+  };
+
   return (
     <div className="pb-28">
       <Header title="Аналитика" subtitle={range.label} />
@@ -152,117 +171,152 @@ export function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Summary card with comparison */}
-      <div className="px-4 mt-4">
-        {summary.isLoading || !summary.data ? (
-          <div className="h-32 bg-ios-surface rounded-ios-lg animate-pulse" />
-        ) : (
-          <SummaryCard current={summary.data.current} previous={summary.data.previous} />
-        )}
-      </div>
-
-      <Card title="Расходы по дням">
-        <div className="px-4 py-3">
-          {daily.data ? (
-            <BarChart
-              bars={daily.data.days.map((d) => ({
-                label: d.day.slice(8), // DD
-                value: parseFloat(d.expense),
-                color: 'var(--ios-accent)',
-              }))}
-              height={130}
-            />
-          ) : (
-            <div className="h-32 bg-ios-surface2 rounded-md animate-pulse" />
-          )}
-        </div>
-      </Card>
-
-      {/* Источники дохода */}
-      {incomeBySource.data && incomeBySource.data.items.length > 0 && (
-        <Card title="Источники дохода">
-          <div className="px-4 pb-3 space-y-2">
-            {incomeBySource.data.items.map((item) => (
-              <div key={item.sourceId}>
-                <div className="flex justify-between text-sm mb-0.5">
-                  <span>{item.name}</span>
-                  <span className="font-medium tabular-nums">{fmtRub(item.amount)}</span>
-                </div>
-                <div className="w-full bg-ios-separator rounded-full h-1">
-                  <div
-                    className="h-1 rounded-full bg-green-500 transition-all"
-                    style={{ width: `${item.share}%` }}
-                  />
-                </div>
-                <div className="text-[11px] text-ios-hint text-right">{item.share}%</div>
-              </div>
-            ))}
-          </div>
-          <div className="px-4 pb-3 text-xs text-ios-hint">Всего: {fmtRub(incomeBySource.data.total)}</div>
-        </Card>
-      )}
-
-      <Card title="Куда ушли деньги">
-        <div className="px-4 py-4">
-          {byCat.data ? (
-            <CategoryDonut items={byCat.data.items} total={byCat.data.total} />
-          ) : (
-            <div className="h-56 bg-ios-surface2 rounded-md animate-pulse" />
-          )}
-        </div>
-      </Card>
-
-      <Card title="Топ категорий расходов">
-        <div className="px-4 py-3">
-          {byCat.data ? (
-            <CategoryBars items={byCat.data.items} total={byCat.data.total} />
-          ) : (
-            <div className="h-40 bg-ios-surface2 rounded-md animate-pulse" />
-          )}
-        </div>
-      </Card>
-
-      {nwHistory.data ? (
-        <NetWorthCard history={nwHistory.data} capital={capital.data} />
+      {everythingFailed ? (
+        <LoadError query={failedAll} compact />
       ) : (
-        <Card title="💰 Мой капитал">
-          <div className="px-4 py-3">
-            <div className="h-52 bg-ios-surface2 rounded-md animate-pulse" />
+        <>
+          {/* Summary card with comparison */}
+          <div className="px-4 mt-4">
+            {summary.data ? (
+              <SummaryCard current={summary.data.current} previous={summary.data.previous} />
+            ) : loadFailure(summary) ? (
+              <div className="bg-ios-surface rounded-ios-lg">
+                <LoadError query={summary} compact />
+              </div>
+            ) : (
+              <div className="h-32 bg-ios-surface rounded-ios-lg animate-pulse" />
+            )}
           </div>
-        </Card>
-      )}
 
-      {soldAssets.data && soldAssets.data.items.length > 0 && (
-        <SoldAssetsCard items={soldAssets.data.items} />
-      )}
+          <Card title="Расходы по дням">
+            <div className="px-4 py-3">
+              {daily.data ? (
+                <BarChart
+                  bars={daily.data.days.map((d) => ({
+                    label: d.day.slice(8), // DD
+                    value: parseFloat(d.expense),
+                    color: 'var(--ios-accent)',
+                  }))}
+                  height={130}
+                />
+              ) : loadFailure(daily) ? (
+                <LoadError query={daily} compact />
+              ) : (
+                <div className="h-32 bg-ios-surface2 rounded-md animate-pulse" />
+              )}
+            </div>
+          </Card>
 
-      <Card title="📈 Инвестиции — динамика">
-        <div className="px-4 py-3">
-          {investHistory.data ? (
-            <>
-              <div className="flex justify-between items-end mb-2">
-                <div className="text-sm text-ios-hint">Текущая стоимость</div>
-                <div className="font-rounded font-bold tabular-nums text-ios-accent">
-                  {fmtRub(investHistory.data.totalNow)}
-                </div>
-              </div>
-              <LineChart
-                points={investHistory.data.weeks.map((w) => ({
-                  x: w.weekEnd,
-                  y: parseFloat(w.total),
-                }))}
-                height={150}
-                color="var(--ios-accent)"
-              />
-              <div className="text-[11px] text-ios-hint mt-2 text-center">
-                по неделям; обновлять остаток в Капитале → каждое пополнение виден на графике
-              </div>
-            </>
-          ) : (
-            <div className="h-40 bg-ios-surface2 rounded-md animate-pulse" />
+          {/* Источники дохода */}
+          {loadFailure(incomeBySource) && (
+            <Card title="Источники дохода">
+              <LoadError query={incomeBySource} compact />
+            </Card>
           )}
-        </div>
-      </Card>
+          {incomeBySource.data && incomeBySource.data.items.length > 0 && (
+            <Card title="Источники дохода">
+              <div className="px-4 pb-3 space-y-2">
+                {incomeBySource.data.items.map((item) => (
+                  <div key={item.sourceId}>
+                    <div className="flex justify-between text-sm mb-0.5">
+                      <span>{item.name}</span>
+                      <span className="font-medium tabular-nums">{fmtRub(item.amount)}</span>
+                    </div>
+                    <div className="w-full bg-ios-separator rounded-full h-1">
+                      <div
+                        className="h-1 rounded-full bg-green-500 transition-all"
+                        style={{ width: `${item.share}%` }}
+                      />
+                    </div>
+                    <div className="text-[11px] text-ios-hint text-right">{item.share}%</div>
+                  </div>
+                ))}
+              </div>
+              <div className="px-4 pb-3 text-xs text-ios-hint">
+                Всего: {fmtRub(incomeBySource.data.total)}
+              </div>
+            </Card>
+          )}
+
+          <Card title="Куда ушли деньги">
+            <div className="px-4 py-4">
+              {byCat.data ? (
+                <CategoryDonut items={byCat.data.items} total={byCat.data.total} />
+              ) : loadFailure(byCat) ? (
+                <LoadError query={byCat} compact />
+              ) : (
+                <div className="h-56 bg-ios-surface2 rounded-md animate-pulse" />
+              )}
+            </div>
+          </Card>
+
+          <Card title="Топ категорий расходов">
+            <div className="px-4 py-3">
+              {byCat.data ? (
+                <CategoryBars items={byCat.data.items} total={byCat.data.total} />
+              ) : loadFailure(byCat) ? (
+                <LoadError query={byCat} compact />
+              ) : (
+                <div className="h-40 bg-ios-surface2 rounded-md animate-pulse" />
+              )}
+            </div>
+          </Card>
+
+          {nwHistory.data ? (
+            <NetWorthCard history={nwHistory.data} capital={capital.data} />
+          ) : (
+            <Card title="💰 Мой капитал">
+              <div className="px-4 py-3">
+                {loadFailure(nwHistory) ? (
+                  <LoadError query={nwHistory} compact />
+                ) : (
+                  <div className="h-52 bg-ios-surface2 rounded-md animate-pulse" />
+                )}
+              </div>
+            </Card>
+          )}
+
+          {loadFailure(soldAssets) && (
+            <Card title="🚗 Куплено и продано">
+              <LoadError query={soldAssets} compact />
+            </Card>
+          )}
+
+          {soldAssets.data && soldAssets.data.items.length > 0 && (
+            <SoldAssetsCard items={soldAssets.data.items} />
+          )}
+
+          <Card title="📈 Инвестиции — динамика">
+            <div className="px-4 py-3">
+              {investHistory.data ? (
+                <>
+                  <div className="flex justify-between items-end mb-2">
+                    <div className="text-sm text-ios-hint">Текущая стоимость</div>
+                    <div className="font-rounded font-bold tabular-nums text-ios-accent">
+                      {fmtRub(investHistory.data.totalNow)}
+                    </div>
+                  </div>
+                  <LineChart
+                    points={investHistory.data.weeks.map((w) => ({
+                      x: w.weekEnd,
+                      y: parseFloat(w.total),
+                    }))}
+                    height={150}
+                    color="var(--ios-accent)"
+                  />
+                  <div className="text-[11px] text-ios-hint mt-2 text-center">
+                    по неделям; обновлять остаток в Капитале → каждое пополнение виден на графике
+                  </div>
+                </>
+              ) : loadFailure(investHistory) ? (
+                <LoadError query={investHistory} compact />
+              ) : (
+                <div className="h-40 bg-ios-surface2 rounded-md animate-pulse" />
+              )}
+            </div>
+          </Card>
+        </>
+      )}
     </div>
   );
 }

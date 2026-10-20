@@ -8,6 +8,8 @@ import { Card, ListRow } from '../components/Card';
 import { Sheet } from '../components/Sheet';
 import { haptic, isInsideTelegram } from '../lib/telegram';
 import { signOut } from '../lib/auth';
+import { loadFailure } from '../lib/queryState';
+import { LoadError } from '../components/LoadError';
 import { useIconTheme, ICON_STYLES, ICON_THEMES, CategoryIcon } from '../lib/iconTheme';
 
 export function SettingsPage({
@@ -33,7 +35,10 @@ export function SettingsPage({
     },
   });
 
-  if (!me.data) return <div className="p-6 text-center text-ios-hint">Загрузка…</div>;
+  if (!me.data) {
+    if (loadFailure(me)) return <LoadError query={me} />;
+    return <div className="p-6 text-center text-ios-hint">Загрузка…</div>;
+  }
 
   return (
     <div className="pb-6">
